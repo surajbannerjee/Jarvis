@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   build:
-    name: Build Debug APK
+    name: Jarvis Assistant APK
     runs-on: ubuntu-latest
 
     steps:
@@ -47,7 +47,7 @@ jobs:
           body: |
             ### 🚀 Jarvis Assistant v1.3.0
             Download and install the APK directly on your phone!
-            
+
             #### 🌟 What's New:
             - **Phone Contact Picker**: In 'Train New Relationship', tap 'Choose Contact from Phone' or click the contact name field to pick contacts directly from your address book (auto-fills saved name & number).
             - **Quick Relation Chips**: Instant one-tap relation tags (bou, maa, baba, vai, boss, friend).
@@ -57,9 +57,8 @@ jobs:
               2. Answering Machine Voicemail
               3. Incoming Caller Alert
             - **Instant Voice Preview**: In-app play/stop buttons to test uploaded custom voice clips and AI personas.
-          files: app/build/outputs/apk/debug/*.apk
-            
-            #### 🌟 New: 10 Iconic Stark AI Persona Voices:
+
+            #### 🌟 10 Iconic Stark AI Persona Voices:
             - **J.A.R.V.I.S.** (Calm British butler AI)
             - **F.R.I.D.A.Y.** (Tactical & energetic Irish female AI)
             - **K.A.R.E.N.** (Gentle Spider-Man suit lady AI)
@@ -70,9 +69,9 @@ jobs:
             - **H.O.M.E.R.** (Vintage armory & estate security AI)
             - **P.L.A.T.O.** (Fast background protocol supervisor)
             - **D.U.M.-E** (Playful workshop robotic arm)
-            
+
             #### 🛡️ Core Capabilities:
-            - **100% Offline Speech Recognition & Dynamic Multilingual TTS**
+            - **100% Speech Recognition & Dynamic Multilingual TTS**
             - **Room Memory Database for Relationship Mapping (bou, maa, boss, etc.)**
             - **Caller Announcement with Relationship Tags**
             - **Autonomous Answering Machine & WhatsApp Notification Reader**
