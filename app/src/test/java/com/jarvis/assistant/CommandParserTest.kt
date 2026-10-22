@@ -21,21 +21,21 @@ class CommandParserTest {
 
     @Test
     fun testBengaliTrainRelation() {
-        val intent = CommandParser.parse("Jarvis, amar bou er nam Priya")
+        val intent = CommandParser.parse("Jarvis, amar bou er nam Priyanka")
         assertTrue(intent is JarvisIntent.TrainRelation)
         val train = intent as JarvisIntent.TrainRelation
         assertEquals("bou", train.relation)
-        assertEquals("Priya", train.contactName)
+        assertEquals("Priyanka", train.contactName)
         assertEquals(SupportedLanguage.BENGALI, train.language)
     }
 
     @Test
     fun testBengaliTrainHoloRelation() {
-        val intent = CommandParser.parse("amar bou holo Priya")
+        val intent = CommandParser.parse("amar bou holo Priyanka")
         assertTrue(intent is JarvisIntent.TrainRelation)
         val train = intent as JarvisIntent.TrainRelation
         assertEquals("bou", train.relation)
-        assertEquals("Priya", train.contactName)
+        assertEquals("Priyanka", train.contactName)
         assertEquals(SupportedLanguage.BENGALI, train.language)
     }
 
@@ -81,10 +81,10 @@ class CommandParserTest {
 
     @Test
     fun testEnglishDirectCall() {
-        val intent = CommandParser.parse("call Priya Sharma")
+        val intent = CommandParser.parse("call Priyanka Sharma")
         assertTrue(intent is JarvisIntent.CallTarget)
         val call = intent as JarvisIntent.CallTarget
-        assertEquals("Priya Sharma", call.target)
+        assertEquals("Priyanka Sharma", call.target)
         assertEquals(SupportedLanguage.ENGLISH, call.language)
     }
 }

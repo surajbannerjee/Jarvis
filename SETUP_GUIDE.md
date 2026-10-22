@@ -73,20 +73,20 @@ To prevent OEMs (Samsung OneUI, Xiaomi MIUI/HyperOS, Oppo/Vivo ColorOS/Funtouch)
 #### Via Voice Command:
 Tap the glowing **Microphone** button on the dashboard and speak naturally:
 - **Bengali**:
-  - *"Jarvis, amar bou er nam Priya"*
-  - *"Amar bou holo Priya Sharma"*
+  - *"Jarvis, amar bou er nam Priyanka"*
+  - *"Amar bou holo Priyanka Sharma"*
   - *"Amar boss holo Rahul Sir"*
 - **Hindi**:
   - *"Meri mummy ka naam Sunita Sharma hai"*
   - *"Mera bhai Rahul hai"*
 - **English**:
-  - *"Remember my wife is Priya"*
+  - *"Remember my wife is Priyanka"*
   - *"Remember my boss is Rahul"*
 
 Jarvis will instantly auto-resolve the phone number from your device contacts, save it to `jarvis_memory.db`, and reply in the same language:
-- Bengali: *"Mone rakhlam, tomar bou holo Priya."*
+- Bengali: *"Mone rakhlam, tomar bou holo Priyanka."*
 - Hindi: *"Yaad rakha, aapka mummy Sunita Sharma hai."*
-- English: *"I have remembered that your wife is Priya."*
+- English: *"I have remembered that your wife is Priyanka."*
 
 #### Via Dashboard UI:
 1. Tap the **+ Add Relationship** button in the dashboard.
@@ -105,8 +105,8 @@ Tap the **Microphone** button or trigger voice recognition and say:
 
 **Execution Flow**:
 1. Jarvis looks up the relationship in local memory.
-2. Resolves `bou` -> `Priya Sharma` -> retrieves `+919876543210`.
-3. Replies: *"Priya Sharma ke call korchi..."* and triggers `ACTION_CALL`.
+2. Resolves `bou` -> `Priyanka Sharma` -> retrieves `+919876543210`.
+3. Replies: *"Priyanka Sharma ke call korchi..."* and triggers `ACTION_CALL`.
 4. If not found in memory, Jarvis prompts: *"Ami bou er number jani na. Kar sathe connect korbo?"*.
 
 ---

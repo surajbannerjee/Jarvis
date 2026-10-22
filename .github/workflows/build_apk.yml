@@ -42,11 +42,16 @@ jobs:
         if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.1.0
-          name: Jarvis Assistant v1.1.0 (Stark AI Persona Edition)
+          tag_name: v1.2.0
+          name: Jarvis Assistant v1.2.0 (Custom Audio & Priyanka Memory Update)
           body: |
-            ### 🚀 Jarvis Assistant v1.1.0 - Stark AI Persona Edition
+            ### 🚀 Jarvis Assistant v1.2.0
             Download and install the APK directly on your phone!
+            
+            #### 🌟 What's New:
+            - **Custom Audio Clips Support**: Now supports playing real MP3/WAV audio files for greetings, caller announcements, and voicemails!
+            - **Updated Relationship Memory Defaults**: Changed all references and prompts to 'Priyanka'.
+            - **Stark AI Persona Engine**: Full 10 Iron Man AIs with custom audio fallback to TTS.
             
             #### 🌟 New: 10 Iconic Stark AI Persona Voices:
             - **J.A.R.V.I.S.** (Calm British butler AI)

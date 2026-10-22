@@ -61,26 +61,44 @@ object AnsweringMachineManager {
 
                 // 4. Voice message to caller (Tailored to active Stark Persona)
                 val persona = PersonaManager.getActivePersona()
-                val voiceMessage = persona.formatVoicemailMessage(isBengali = true)
 
-                val speechManager = JarvisApp.instance.speechManager
-
-                // Speak via STREAM_VOICE_CALL so caller hears it through speakerphone mic loopback/telephony stream
-                speechManager.speak(
-                    text = voiceMessage,
-                    language = SupportedLanguage.BENGALI,
+                // Check if user provided custom audio file (e.g. jarvis_voicemail.mp3)
+                val customVoicemailPlayed = com.jarvis.assistant.audio.CustomAudioPlayer.playCustomAudio(
+                    context = context,
+                    audioFileNameWithoutExtension = "${persona.id}_voicemail",
                     streamType = AudioManager.STREAM_VOICE_CALL
                 ) {
-                    // 5. On speech completion callback
                     scope.launch {
-                        delay(2000) // 2 seconds post-speech pause
-                        Log.d(TAG, "Terminating call post voicemail...")
+                        delay(2000)
+                        Log.d(TAG, "Terminating call post custom voicemail...")
                         hangUpCall(context)
-
-                        // 6. Restore original audio settings
                         audioManager.isSpeakerphoneOn = originalSpeakerphone
                         audioManager.mode = originalMode
                         isCallInProgress = false
+                    }
+                }
+
+                if (!customVoicemailPlayed) {
+                    val voiceMessage = persona.formatVoicemailMessage(isBengali = true)
+                    val speechManager = JarvisApp.instance.speechManager
+
+                    // Speak via STREAM_VOICE_CALL so caller hears it through speakerphone mic loopback/telephony stream
+                    speechManager.speak(
+                        text = voiceMessage,
+                        language = SupportedLanguage.BENGALI,
+                        streamType = AudioManager.STREAM_VOICE_CALL
+                    ) {
+                        // 5. On speech completion callback
+                        scope.launch {
+                            delay(2000) // 2 seconds post-speech pause
+                            Log.d(TAG, "Terminating call post voicemail...")
+                            hangUpCall(context)
+
+                            // 6. Restore original audio settings
+                            audioManager.isSpeakerphoneOn = originalSpeakerphone
+                            audioManager.mode = originalMode
+                            isCallInProgress = false
+                        }
                     }
                 }
             } catch (e: Exception) {

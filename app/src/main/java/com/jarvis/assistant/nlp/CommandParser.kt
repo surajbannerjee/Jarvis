@@ -128,7 +128,7 @@ object CommandParser {
         val lower = text.lowercase(Locale.ROOT)
 
         // Bengali patterns:
-        // "amar bou er nam Priya", "amar bou holo Priya", "amar bou Priya", "mone rekho amar bou holo Priya"
+        // "amar bou er nam Priyanka", "amar bou holo Priyanka", "amar bou Priyanka", "mone rekho amar bou holo Priyanka"
         val bnPatterns = listOf(
             Regex("(?:mone rekho )?amar\\s+([a-zA-Z\\u0980-\\u09FF]+)\\s+er\\s+na[am]\\s+(?:holo\\s+)?(.+)", RegexOption.IGNORE_CASE),
             Regex("(?:mone rekho )?amar\\s+([a-zA-Z\\u0980-\\u09FF]+)\\s+holo\\s+(.+)", RegexOption.IGNORE_CASE),
@@ -146,7 +146,7 @@ object CommandParser {
         }
 
         // Hindi patterns:
-        // "mera bhai Rahul hai", "meri mummy ka naam Sunita hai", "yaad rakhna meri wife Priya hai"
+        // "mera bhai Rahul hai", "meri mummy ka naam Sunita hai", "yaad rakhna meri wife Priyanka hai"
         val hiPatterns = listOf(
             Regex("(?:yaad rakh(?:na|o) )?mer(?:a|i)\\s+([a-zA-Z\\u0900-\\u097F]+)\\s+ka\\s+naam\\s+(.+?)(?:\\s+hai)?$", RegexOption.IGNORE_CASE),
             Regex("(?:yaad rakh(?:na|o) )?mer(?:a|i)\\s+([a-zA-Z\\u0900-\\u097F]+)\\s+(?:hai\\s+)?(.+?)(?:\\s+hai)?$", RegexOption.IGNORE_CASE),
@@ -164,7 +164,7 @@ object CommandParser {
         }
 
         // English patterns:
-        // "remember my wife is Priya", "my wife is Priya", "remember my boss is Rahul"
+        // "remember my wife is Priyanka", "my wife is Priyanka", "remember my boss is Rahul"
         val enPatterns = listOf(
             Regex("(?:remember\\s+)?(?:that\\s+)?my\\s+([a-zA-Z]+)\\s+is\\s+(.+)", RegexOption.IGNORE_CASE),
             Regex("(?:set|save)\\s+my\\s+([a-zA-Z]+)\\s+(?:as|to)\\s+(.+)", RegexOption.IGNORE_CASE),
@@ -188,7 +188,7 @@ object CommandParser {
         val lower = text.lowercase(Locale.ROOT)
 
         // Bengali patterns:
-        // "amar bou ke call koro", "bou ke call koro", "Priya ke call koro", "maa ke phone lagao", "call koro amar bou ke"
+        // "amar bou ke call koro", "bou ke call koro", "Priyanka ke call koro", "maa ke phone lagao", "call koro amar bou ke"
         val bnCallPatterns = listOf(
             Regex("(?:amar\\s+)?(.+?)\\s+ke\\s+(?:call|phone|dial)\\s+(?:koro|korun|lagao)", RegexOption.IGNORE_CASE),
             Regex("(?:call|phone|dial)\\s+koro\\s+(?:amar\\s+)?(.+?)(?:\\s+ke)?$", RegexOption.IGNORE_CASE),
@@ -206,7 +206,7 @@ object CommandParser {
         }
 
         // Hindi patterns:
-        // "mummy ko call lagao", "mera boss ko call karo", "Priya ko phone lagao"
+        // "mummy ko call lagao", "mera boss ko call karo", "Priyanka ko phone lagao"
         val hiCallPatterns = listOf(
             Regex("(?:mer(?:a|i)\\s+)?(.+?)\\s+ko\\s+(?:call|phone|dial)\\s+(?:lagao|karo|kijie)", RegexOption.IGNORE_CASE),
             Regex("(?:call|phone|dial)\\s+(?:lagao|karo)\\s+(?:mer(?:a|i)\\s+)?(.+?)(?:\\s+ko)?$", RegexOption.IGNORE_CASE)
@@ -223,7 +223,7 @@ object CommandParser {
         }
 
         // English patterns:
-        // "call my wife", "call Priya", "dial my boss", "phone my mother"
+        // "call my wife", "call Priyanka", "dial my boss", "phone my mother"
         val enCallPatterns = listOf(
             Regex("(?:please\\s+)?(?:call|dial|phone)\\s+(?:my\\s+)?(.+)", RegexOption.IGNORE_CASE),
             Regex("(?:make\\s+a\\s+call\\s+to\\s+)(?:my\\s+)?(.+)", RegexOption.IGNORE_CASE)

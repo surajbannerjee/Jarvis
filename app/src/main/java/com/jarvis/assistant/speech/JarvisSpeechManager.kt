@@ -189,12 +189,20 @@ class JarvisSpeechManager private constructor(private val context: Context) :
 
     fun previewPersona(persona: StarkPersona, inBengali: Boolean = false) {
         applyPersona(persona)
-        val text = if (inBengali) persona.signatureGreetingBengali else persona.signatureGreeting
-        val lang = if (inBengali) SupportedLanguage.BENGALI else SupportedLanguage.ENGLISH
-        speak(text, lang)
+        // Check if user provided custom audio file for this persona (e.g. jarvis_greeting.mp3)
+        val customAudioPlayed = com.jarvis.assistant.audio.CustomAudioPlayer.playCustomAudio(
+            context,
+            "${persona.id}_greeting"
+        )
+        if (!customAudioPlayed) {
+            val text = if (inBengali) persona.signatureGreetingBengali else persona.signatureGreeting
+            val lang = if (inBengali) SupportedLanguage.BENGALI else SupportedLanguage.ENGLISH
+            speak(text, lang)
+        }
     }
 
     fun stopSpeaking() {
+        com.jarvis.assistant.audio.CustomAudioPlayer.stopAudio()
         tts?.stop()
         completionCallbacks.clear()
     }
