@@ -63,7 +63,7 @@
                     android:textStyle="bold" />
             </LinearLayout>
 
-            <!-- ═══ Stark AI Persona Card ═══ -->
+            <!-- ═══ F.R.I.D.A.Y. AI CORE Card ═══ -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -83,7 +83,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="STARK AI PERSONA"
+                        android:text="F.R.I.D.A.Y. AI CORE"
                         android:textColor="@color/jarvis_cyan_primary"
                         android:textSize="14sp"
                         android:textStyle="bold"
@@ -101,7 +101,7 @@
                         android:textColor="@color/jarvis_cyan_primary"
                         android:textSize="11sp"
                         android:textStyle="bold"
-                        tools:text="BRITISH MALE" />
+                        android:text="TACTICAL FEMALE" />
                 </LinearLayout>
 
                 <TextView
@@ -109,9 +109,9 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textColor="@color/text_primary"
-                    android:textSize="20sp"
+                    android:textSize="22sp"
                     android:textStyle="bold"
-                    tools:text="J.A.R.V.I.S." />
+                    android:text="F.R.I.D.A.Y." />
 
                 <TextView
                     android:id="@+id/tvPersonaCodeName"
@@ -120,7 +120,7 @@
                     android:textColor="@color/jarvis_accent_blue"
                     android:textSize="12sp"
                     android:layout_marginBottom="4dp"
-                    tools:text="Just A Rather Very Intelligent System" />
+                    android:text="Female Replacement Intelligent Digital Assistant Youth" />
 
                 <TextView
                     android:id="@+id/tvPersonaDescription"
@@ -129,32 +129,60 @@
                     android:textColor="@color/text_secondary"
                     android:textSize="12sp"
                     android:layout_marginBottom="12dp"
-                    tools:text="Tony's primary butler AI. Calm, sophisticated, British, highly analytical." />
+                    android:text="Tony Stark's tactical AI assistant. Fully voice controlled with sweet natural voice, auto language detection &amp; background 'Hi Friday' wakeup." />
 
+                <!-- Action buttons -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal">
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="12dp">
 
                     <Button
-                        android:id="@+id/btnSwitchPersona"
+                        android:id="@+id/btnPreviewVoice"
                         style="@style/Widget.Material3.Button.TonalButton"
                         android:layout_width="0dp"
                         android:layout_height="40dp"
                         android:layout_weight="1"
-                        android:text="Switch AI Voice"
+                        android:text="🎧 Play Friday Voice"
+                        android:textColor="@color/jarvis_cyan_primary"
                         android:textSize="12sp"
                         android:layout_marginEnd="8dp" />
 
                     <Button
-                        android:id="@+id/btnPreviewVoice"
+                        android:id="@+id/btnTuneVoice"
                         style="@style/Widget.Material3.Button.OutlinedButton"
                         android:layout_width="wrap_content"
                         android:layout_height="40dp"
-                        android:text="Preview Voice"
+                        android:text="🎛️ Tune Voice"
                         android:textColor="@color/jarvis_cyan_primary"
                         android:textSize="12sp" />
                 </LinearLayout>
+
+                <!-- 'Hi Friday' Background Wake Word Switch -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="#22FFFFFF"
+                    android:layout_marginBottom="10dp" />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switchWakeWord"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:checked="true"
+                    android:text="🎙️ 'Hi Friday' Background Wakeup"
+                    android:textColor="@color/jarvis_cyan_primary"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Keep Friday listening in the background. Just say 'Hi Friday' or 'Friday' anytime to wake up and give voice commands without opening the app."
+                    android:textColor="@color/text_secondary"
+                    android:textSize="11sp"
+                    android:layout_marginTop="2dp" />
 
             </LinearLayout>
 
@@ -890,7 +918,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="@string/unattended_threshold_label"
+                        android:text="Unattended Ring Threshold:"
                         android:textColor="@color/text_secondary"
                         android:textSize="12sp" />
 
@@ -901,18 +929,123 @@
                         android:background="@drawable/bg_card"
                         android:gravity="center"
                         android:inputType="number"
-                        android:text="15"
+                        android:text="12"
                         android:textColor="@color/text_primary"
                         android:textSize="14sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text=" sec"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="12sp"
+                        android:layout_marginStart="4dp" />
                 </LinearLayout>
+
+                <!-- Quick Threshold Chips -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="8dp">
+
+                    <Button
+                        android:id="@+id/chipRing10s"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="32dp"
+                        android:text="10 sec"
+                        android:textSize="11sp"
+                        android:layout_marginEnd="6dp" />
+
+                    <Button
+                        android:id="@+id/chipRing12s"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="32dp"
+                        android:text="12 sec"
+                        android:textSize="11sp"
+                        android:layout_marginEnd="6dp" />
+
+                    <Button
+                        android:id="@+id/chipRing15s"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="32dp"
+                        android:text="15 sec"
+                        android:textSize="11sp" />
+                </LinearLayout>
+
+                <!-- Call Recording Switch -->
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switchRecordCalls"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:checked="true"
+                    android:text="🎙️ Record Call Conversation"
+                    android:textColor="@color/jarvis_cyan_primary"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="14dp" />
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="If an incoming call rings unanswered for this many seconds, the active Stark AI picks up, speaks the voicemail message, and terminates the call."
+                    android:layout_marginTop="4dp"
+                    android:text="When Friday answers an unanswered call, the entire conversation is recorded and saved to your device for listening later."
                     android:textColor="@color/text_secondary"
                     android:textSize="11sp" />
+            </LinearLayout>
+
+            <!-- ═══ Recorded Calls & Voicemails Card ═══ -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_card"
+                android:orientation="vertical"
+                android:padding="16dp"
+                android:layout_marginBottom="24dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="📞 RECORDED CALLS"
+                        android:textColor="@color/jarvis_cyan_primary"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <Button
+                        android:id="@+id/btnRefreshRecordings"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:text="🔄 Refresh"
+                        android:textColor="@color/jarvis_cyan_primary"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tvEmptyRecordings"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="No recorded calls yet. Unanswered calls answered by Friday will appear here."
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp"
+                    android:layout_marginBottom="8dp" />
+
+                <LinearLayout
+                    android:id="@+id/layoutRecordingsContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
             </LinearLayout>
 
         </LinearLayout>

@@ -79,7 +79,7 @@ object CommandParser {
 
     private fun cleanInput(raw: String): String {
         return raw.trim()
-            .replace(Regex("^(hey\\s+)?jarvis[,\\s]*", RegexOption.IGNORE_CASE), "")
+            .replace(Regex("^(hey\\s+|hi\\s+|hello\\s+)?(friday|jarvis)[,\\s]*", RegexOption.IGNORE_CASE), "")
             .replace(Regex("[?!.,]$"), "")
             .trim()
     }
@@ -87,39 +87,50 @@ object CommandParser {
     fun detectLanguage(text: String): SupportedLanguage {
         val lower = text.lowercase(Locale.ROOT)
 
-        // Script checks
+        // 1. Script checks (Bengali & Devanagari)
         for (ch in text) {
             val u = ch.code
             if (u in 0x0980..0x09FF) return SupportedLanguage.BENGALI
             if (u in 0x0900..0x097F) return SupportedLanguage.HINDI
         }
 
-        // Banglish / Romanized Bengali keyword markers
+        // 2. Banglish / Romanized Bengali keyword markers
         val bengaliKeywords = listOf(
-            "amar", "amr", "bou", "er", "holo", "koro", "mone", "rekho", "korche",
-            "dhorche", "bolchi", "khobor", "pathiyeche", "ke"
-        )
-        // Hinglish / Romanized Hindi keyword markers
-        val hindiKeywords = listOf(
-            "mera", "meri", "mere", "ko", "karo", "lagao", "naam", "hai",
-            "yaad", "rakho", "bol", "bhai", "kripya"
+            "amar", "amr", "bou", "er", "holo", "koro", "korchi", "korche", "korbo",
+            "mone", "rekho", "dhorche", "dhoro", "bolchi", "bolo", "khobor", "pathiyeche",
+            "ke", "kemon", "acho", "achi", "valo", "bhalo", "somoy", "baje", "koto",
+            "tarikh", "tumi", "apni", "apnar", "shonao", "hasao", "kotha", "shuncho",
+            "shunte", "pacho", "sahajjo", "parba", "parbo", "paro", "ki", "naam"
         )
 
-        val words = lower.split("\\s+".toRegex()).toSet()
+        // 3. Hinglish / Romanized Hindi keyword markers
+        val hindiKeywords = listOf(
+            "mera", "meri", "mere", "ko", "karo", "karenge", "karega", "lagao", "naam",
+            "hai", "ho", "hoon", "yaad", "rakho", "bol", "bhai", "kripya", "kaise", "kya",
+            "samay", "batao", "suno", "madat", "tum", "aap", "kaun"
+        )
+
+        val words = lower.split("[\\s,?.!]+".toRegex()).toSet()
         var bengaliScore = words.count { it in bengaliKeywords }
         var hindiScore = words.count { it in hindiKeywords }
 
         // Contextual phrases
-        if (lower.contains("er nam") || lower.contains("ke call") || lower.contains("call koro")) {
-            bengaliScore += 3
+        if (lower.contains("er nam") || lower.contains("ke call") || lower.contains("call koro") ||
+            lower.contains("kemon acho") || lower.contains("ki korte") || lower.contains("koto baje")
+        ) {
+            bengaliScore += 4
         }
-        if (lower.contains("ka naam") || lower.contains("ko call") || lower.contains("call lagao")) {
-            hindiScore += 3
+        if (lower.contains("ka naam") || lower.contains("ko call") || lower.contains("call lagao") ||
+            lower.contains("kaise ho") || lower.contains("kya kar") || lower.contains("kitne baje")
+        ) {
+            hindiScore += 4
         }
 
         return when {
             bengaliScore > hindiScore && bengaliScore > 0 -> SupportedLanguage.BENGALI
             hindiScore > bengaliScore && hindiScore > 0 -> SupportedLanguage.HINDI
+            bengaliScore > 0 -> SupportedLanguage.BENGALI
+            hindiScore > 0 -> SupportedLanguage.HINDI
             else -> SupportedLanguage.ENGLISH
         }
     }

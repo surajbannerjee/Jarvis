@@ -59,6 +59,11 @@ object AnsweringMachineManager {
                 audioManager.isSpeakerphoneOn = true
                 Log.d(TAG, "Audio routed to Speakerphone for voicemail playback.")
 
+                // Start recording call conversation if enabled
+                if (JarvisApp.instance.isCallRecordingEnabled()) {
+                    CallRecordingManager.startRecording(context, callerRelationOrName)
+                }
+
                 // 4. Voice message to caller (Tailored to active Stark Persona)
                 val persona = PersonaManager.getActivePersona()
 
@@ -66,6 +71,7 @@ object AnsweringMachineManager {
                     scope.launch {
                         delay(2000)
                         Log.d(TAG, "Terminating call post voicemail...")
+                        CallRecordingManager.stopRecording(context)
                         hangUpCall(context)
                         audioManager.isSpeakerphoneOn = originalSpeakerphone
                         audioManager.mode = originalMode
@@ -117,6 +123,7 @@ object AnsweringMachineManager {
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error during voicemail playback", e)
+                CallRecordingManager.stopRecording(context)
                 hangUpCall(context)
                 audioManager.isSpeakerphoneOn = originalSpeakerphone
                 audioManager.mode = originalMode

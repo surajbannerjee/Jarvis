@@ -76,12 +76,14 @@ class JarvisSpeechManager private constructor(private val context: Context) :
         if (!isTtsInitialized || tts == null) return
 
         try {
-            tts?.setPitch(persona.pitch)
-            tts?.setSpeechRate(persona.speechRate)
+            val customPitch = JarvisApp.instance.getFridayPitch()
+            val customSpeed = JarvisApp.instance.getFridaySpeed()
+            tts?.setPitch(customPitch)
+            tts?.setSpeechRate(customSpeed)
 
             // Try selecting gender-matched voice if device has multiple voices
             selectVoiceForPersona(persona, SupportedLanguage.ENGLISH)
-            Log.d(TAG, "Applied persona: ${persona.displayName} (Pitch: ${persona.pitch}, Rate: ${persona.speechRate})")
+            Log.d(TAG, "Applied persona: ${persona.displayName} (Pitch: $customPitch, Rate: $customSpeed)")
         } catch (e: Exception) {
             Log.e(TAG, "Error applying persona voice settings", e)
         }
@@ -98,32 +100,36 @@ class JarvisSpeechManager private constructor(private val context: Context) :
                 SupportedLanguage.ENGLISH -> persona.preferredLocale
             }
 
-            // Find matching voice by locale and gender keyword
+            // Find matching voice by locale and female/natural keyword
             val matchingVoices = voices.filter { it.locale.language == targetLocale.language }
-            val preferredVoice = when (persona.gender) {
-                PersonaGender.FEMALE -> {
-                    matchingVoices.firstOrNull {
-                        it.name.contains("female", ignoreCase = true) ||
-                        it.name.contains("woman", ignoreCase = true) ||
-                        it.name.contains("f0", ignoreCase = true)
-                    } ?: matchingVoices.firstOrNull()
-                }
-                PersonaGender.MALE, PersonaGender.ROBOTIC -> {
-                    matchingVoices.firstOrNull {
-                        it.name.contains("male", ignoreCase = true) ||
-                        it.name.contains("man", ignoreCase = true) ||
-                        it.name.contains("m0", ignoreCase = true)
-                    } ?: matchingVoices.firstOrNull()
-                }
-            }
+            val preferredVoice = matchingVoices.firstOrNull {
+                it.name.contains("female", ignoreCase = true) ||
+                it.name.contains("woman", ignoreCase = true) ||
+                it.name.contains("f0", ignoreCase = true) ||
+                it.name.contains("-f-", ignoreCase = true) ||
+                it.name.contains("bnd", ignoreCase = true) ||
+                it.name.contains("ief", ignoreCase = true) ||
+                it.name.contains("sfg", ignoreCase = true)
+            } ?: matchingVoices.firstOrNull()
 
             if (preferredVoice != null) {
                 tts?.voice = preferredVoice
-                Log.d(TAG, "Selected voice for ${persona.displayName}: ${preferredVoice.name}")
+                Log.d(TAG, "Selected natural voice for ${persona.displayName}: ${preferredVoice.name}")
             }
         } catch (e: Exception) {
             Log.w(TAG, "Voice selection fallback to default locale", e)
         }
+    }
+
+    fun setFridayPitchAndSpeed(pitch: Float, speed: Float) {
+        JarvisApp.instance.setFridayPitch(pitch)
+        JarvisApp.instance.setFridaySpeed(speed)
+        tts?.setPitch(pitch)
+        tts?.setSpeechRate(speed)
+    }
+
+    fun getAvailableVoices(): List<android.speech.tts.Voice> {
+        return tts?.voices?.toList() ?: emptyList()
     }
 
     fun setTtsLanguage(lang: SupportedLanguage) {
@@ -152,8 +158,10 @@ class JarvisSpeechManager private constructor(private val context: Context) :
             }
 
             // Re-apply pitch & speechRate and voice
-            tts?.setPitch(currentPersona.pitch)
-            tts?.setSpeechRate(currentPersona.speechRate)
+            val customPitch = JarvisApp.instance.getFridayPitch()
+            val customSpeed = JarvisApp.instance.getFridaySpeed()
+            tts?.setPitch(customPitch)
+            tts?.setSpeechRate(customSpeed)
             selectVoiceForPersona(currentPersona, lang)
         } catch (e: Exception) {
             Log.e(TAG, "Error switching TTS language", e)

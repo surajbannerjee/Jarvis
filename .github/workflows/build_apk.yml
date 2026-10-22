@@ -72,26 +72,20 @@ jobs:
         if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.4.0
-          name: Jarvis Assistant v1.4.0 (F.R.I.D.A.Y. Voice & Free AI Assistant)
+          tag_name: v1.5.0
+          name: Jarvis Assistant v1.5.0 (Dedicated F.R.I.D.A.Y., "Hi Friday" Wake Word & Call Recording)
           body: |
-            ### 🚀 Jarvis Assistant v1.4.0
+            ### 🚀 Jarvis Assistant v1.5.0
             Download and install the APK directly on your phone!
 
-            #### 🌟 What's New in v1.4.0:
-            - **🎧 Built-in F.R.I.D.A.Y. Signature Voice**: Integrated the user's custom `speech.wav` directly into F.R.I.D.A.Y.'s persona audio! Tapping 'Play F.R.I.D.A.Y. Voice' or activating Friday immediately plays her authentic speech audio!
-            - **🤖 Full Free AI Chat Assistant**: Talk naturally to your assistant about anything ("Kemon acho?", "Tumi ke?", "Ki korte paro?", "Ekta joke shonao", weather, jokes, chit-chat in Bengali, Hindi, and English)!
-            - **⚡ Smart AI Auto-Reply & Answering Machine**: Unattended calls and WhatsApp messages now receive intelligent, polite auto-replies generated on-the-fly by the AI Assistant!
-            - **🔑 Optional Free Google Gemini API**: Built-in 100% Free AI Engine works out-of-the-box, plus you can paste an optional Free Google Gemini API Key for deep conversational mastery!
-            - **📱 Phone Contact Picker**: In 'Train New Relationship', pick contacts directly from phone contacts with auto-filled name & number.
-            - **🎙️ Arc Reactor Glowing UI**: Pulsing cyan glow animation during voice recognition.
-            - **🎧 Custom Voice Studio**: Upload, test, and preview custom greeting, voicemail, and caller alert audio files.
-
-            #### 🛡️ Core Capabilities:
-            - **100% Speech Recognition & Dynamic Multilingual TTS**
-            - **Room Memory Database for Relationship Mapping (bou, maa, boss, etc.)**
-            - **Caller Announcement with Relationship Tags**
-            - **Autonomous Answering Machine & WhatsApp Notification Reader**
+            #### 🌟 What's New in v1.5.0:
+            - **🎙️ Background "Hi Friday" Wake Word Detection**: No need to open the app manually! Just say "Hi Friday", "Friday", or "ফ্রাইডে" anytime, and Friday immediately wakes up in the background and listens to your command (like "Hey Google").
+            - **👩 Dedicated F.R.I.D.A.Y. Core**: Streamlined the assistant into Tony Stark's iconic F.R.I.D.A.Y. AI — cleaner, faster, and permanently active.
+            - **🎛️ Sweet & Natural Voice Tuner**: Live pitch (tone) and speech rate sliders to customize Friday's voice into the sweet, melodious voice you love. The customized voice stays consistent across greetings, AI chat, answering machine, and caller alerts.
+            - **🌐 Smart Auto-Language Detection**: Automatically detects whether you are speaking Bengali (বাংলা / Banglish), Hindi, or English, and answers naturally in that exact same language.
+            - **📞 10s–15s Auto Call Answering + Full Call Recording**: If an incoming call is unanswered within 10–15 seconds, Friday answers the call and automatically records the entire conversation into high-quality AAC audio.
+            - **📂 Recorded Calls Player**: Playback, inspect date/time/file size, and manage recorded phone conversations directly from the app interface.
+            - **🤖 Built-in Free AI Brain + Optional Gemini API**: Chit-chat, ask questions, or provide instructions seamlessly.
           files: app/build/outputs/apk/debug/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

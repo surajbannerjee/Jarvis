@@ -17,7 +17,7 @@ object PersonaManager {
     val activePersonaFlow: StateFlow<StarkPersona> = _activePersonaFlow.asStateFlow()
 
     fun getActivePersona(): StarkPersona {
-        val id = preferences.getString(KEY_ACTIVE_PERSONA, StarkPersona.JARVIS.id)
+        val id = preferences.getString(KEY_ACTIVE_PERSONA, StarkPersona.FRIDAY.id)
         return StarkPersona.fromId(id)
     }
 

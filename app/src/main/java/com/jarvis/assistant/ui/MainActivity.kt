@@ -22,6 +22,8 @@ import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
+import android.widget.LinearLayout
+import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -46,8 +48,10 @@ import com.jarvis.assistant.nlp.SupportedLanguage
 import com.jarvis.assistant.persona.PersonaGender
 import com.jarvis.assistant.persona.PersonaManager
 import com.jarvis.assistant.persona.StarkPersona
+import com.jarvis.assistant.service.FridayWakeWordService
 import com.jarvis.assistant.speech.JarvisSpeechManager
 import com.jarvis.assistant.ai.JarvisAiBrain
+import com.jarvis.assistant.telephony.CallRecordingManager
 import com.jarvis.assistant.telephony.JarvisAccessibilityService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
@@ -58,14 +62,15 @@ class MainActivity : AppCompatActivity() {
 
     private val tag = "MainActivity"
 
-    // Header & Persona Views
+    // Header & Persona Views (Dedicated F.R.I.D.A.Y.)
     private lateinit var tvAppTitle: TextView
     private lateinit var tvPersonaDisplayName: TextView
     private lateinit var tvPersonaCodeName: TextView
     private lateinit var tvPersonaDescription: TextView
     private lateinit var tvPersonaGenderBadge: TextView
-    private lateinit var btnSwitchPersona: Button
+    private lateinit var btnTuneVoice: Button
     private lateinit var btnPreviewVoice: Button
+    private lateinit var switchWakeWord: MaterialSwitch
 
     // Voice Assistant Views
     private lateinit var btnMic: ImageButton
@@ -122,6 +127,13 @@ class MainActivity : AppCompatActivity() {
     // Answering Machine Views
     private lateinit var switchAnsweringMachine: MaterialSwitch
     private lateinit var etRingThreshold: EditText
+    private var chipRing10s: Button? = null
+    private var chipRing12s: Button? = null
+    private var chipRing15s: Button? = null
+    private lateinit var switchRecordCalls: MaterialSwitch
+    private lateinit var btnRefreshRecordings: Button
+    private lateinit var tvEmptyRecordings: TextView
+    private lateinit var layoutRecordingsContainer: LinearLayout
 
     private lateinit var aliasAdapter: AliasAdapter
     private val speechManager: JarvisSpeechManager by lazy { JarvisApp.instance.speechManager }
@@ -235,6 +247,25 @@ class MainActivity : AppCompatActivity() {
         observeAliases()
         observePersona()
         updateCustomAudioUi()
+
+        if (JarvisApp.instance.isWakeWordEnabled()) {
+            FridayWakeWordService.start(this)
+        }
+        renderRecordedCalls()
+        handleWakeIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        handleWakeIntent(intent)
+    }
+
+    private fun handleWakeIntent(intent: Intent?) {
+        if (intent?.getBooleanExtra(FridayWakeWordService.EXTRA_TRIGGER_VOICE, false) == true) {
+            if (!isListening) {
+                startVoiceAssistant()
+            }
+        }
     }
 
     override fun onResume() {
@@ -255,8 +286,10 @@ class MainActivity : AppCompatActivity() {
         tvPersonaCodeName = findViewById(R.id.tvPersonaCodeName)
         tvPersonaDescription = findViewById(R.id.tvPersonaDescription)
         tvPersonaGenderBadge = findViewById(R.id.tvPersonaGenderBadge)
-        btnSwitchPersona = findViewById(R.id.btnSwitchPersona)
+        btnTuneVoice = findViewById(R.id.btnTuneVoice)
         btnPreviewVoice = findViewById(R.id.btnPreviewVoice)
+        switchWakeWord = findViewById(R.id.switchWakeWord)
+        switchWakeWord.isChecked = JarvisApp.instance.isWakeWordEnabled()
 
         btnMic = findViewById(R.id.btnMic)
         tvVoiceStatus = findViewById(R.id.tvVoiceStatus)
@@ -311,6 +344,17 @@ class MainActivity : AppCompatActivity() {
 
         switchAnsweringMachine.isChecked = JarvisApp.instance.isAnsweringMachineEnabled()
         etRingThreshold.setText(JarvisApp.instance.getRingThresholdSeconds().toString())
+
+        switchRecordCalls = findViewById(R.id.switchRecordCalls)
+        switchRecordCalls.isChecked = JarvisApp.instance.isCallRecordingEnabled()
+
+        chipRing10s = findViewById(R.id.chipRing10s)
+        chipRing12s = findViewById(R.id.chipRing12s)
+        chipRing15s = findViewById(R.id.chipRing15s)
+
+        btnRefreshRecordings = findViewById(R.id.btnRefreshRecordings)
+        tvEmptyRecordings = findViewById(R.id.tvEmptyRecordings)
+        layoutRecordingsContainer = findViewById(R.id.layoutRecordingsContainer)
     }
 
     private fun setupRecyclerView() {
@@ -324,8 +368,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupListeners() {
-        btnSwitchPersona.setOnClickListener {
-            showPersonaSelectionDialog()
+        btnTuneVoice.setOnClickListener {
+            showVoiceTuningDialog()
+        }
+
+        switchWakeWord.setOnCheckedChangeListener { _, isChecked ->
+            JarvisApp.instance.setWakeWordEnabled(isChecked)
+            if (isChecked) {
+                FridayWakeWordService.start(this)
+                Toast.makeText(this, "Friday wake-word activated! Say 'Hi Friday' anytime.", Toast.LENGTH_SHORT).show()
+            } else {
+                FridayWakeWordService.stop(this)
+                Toast.makeText(this, "Friday wake-word disabled.", Toast.LENGTH_SHORT).show()
+            }
         }
 
         btnPreviewVoice.setOnClickListener {
@@ -466,6 +521,32 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         })
+
+        switchRecordCalls.setOnCheckedChangeListener { _, isChecked ->
+            JarvisApp.instance.setCallRecordingEnabled(isChecked)
+            val msg = if (isChecked) "Call recording enabled" else "Call recording disabled"
+            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+        }
+
+        chipRing10s?.setOnClickListener {
+            etRingThreshold.setText("10")
+            JarvisApp.instance.setRingThresholdSeconds(10)
+            Toast.makeText(this, "Auto-answer threshold: 10s", Toast.LENGTH_SHORT).show()
+        }
+        chipRing12s?.setOnClickListener {
+            etRingThreshold.setText("12")
+            JarvisApp.instance.setRingThresholdSeconds(12)
+            Toast.makeText(this, "Auto-answer threshold: 12s", Toast.LENGTH_SHORT).show()
+        }
+        chipRing15s?.setOnClickListener {
+            etRingThreshold.setText("15")
+            JarvisApp.instance.setRingThresholdSeconds(15)
+            Toast.makeText(this, "Auto-answer threshold: 15s", Toast.LENGTH_SHORT).show()
+        }
+
+        btnRefreshRecordings.setOnClickListener {
+            renderRecordedCalls()
+        }
     }
 
     private fun runVoiceChipDirective(directive: String) {
@@ -560,22 +641,122 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun showPersonaSelectionDialog() {
-        val personas = StarkPersona.entries.toTypedArray()
-        val items = personas.map { "${it.displayName} - ${it.codeName}" }.toTypedArray()
-        val currentIdx = personas.indexOf(PersonaManager.getActivePersona())
+    private fun showVoiceTuningDialog() {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_voice_tuning, null)
+        val tvPitchVal = dialogView.findViewById<TextView>(R.id.tvPitchValue)
+        val seekPitch = dialogView.findViewById<SeekBar>(R.id.seekPitch)
+        val tvSpeedVal = dialogView.findViewById<TextView>(R.id.tvSpeedValue)
+        val seekSpeed = dialogView.findViewById<SeekBar>(R.id.seekSpeed)
+        val btnTest = dialogView.findViewById<Button>(R.id.btnTestTunedVoice)
+
+        val currentPitch = JarvisApp.instance.getFridayPitch()
+        val pitchProgress = (((currentPitch - 0.7f) / 1.0f) * 100f).toInt().coerceIn(0, 100)
+        seekPitch.progress = pitchProgress
+        tvPitchVal.text = String.format(java.util.Locale.US, "%.2fx", currentPitch)
+
+        val currentSpeed = JarvisApp.instance.getFridaySpeed()
+        val speedProgress = (((currentSpeed - 0.7f) / 0.8f) * 100f).toInt().coerceIn(0, 100)
+        seekSpeed.progress = speedProgress
+        tvSpeedVal.text = String.format(java.util.Locale.US, "%.2fx", currentSpeed)
+
+        var tunedPitch = currentPitch
+        var tunedSpeed = currentSpeed
+
+        seekPitch.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(sb: SeekBar?, progress: Int, fromUser: Boolean) {
+                tunedPitch = 0.7f + (progress / 100f) * 1.0f
+                tvPitchVal.text = String.format(java.util.Locale.US, "%.2fx", tunedPitch)
+                speechManager.setFridayPitchAndSpeed(tunedPitch, tunedSpeed)
+            }
+            override fun onStartTrackingTouch(sb: SeekBar?) {}
+            override fun onStopTrackingTouch(sb: SeekBar?) {}
+        })
+
+        seekSpeed.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(sb: SeekBar?, progress: Int, fromUser: Boolean) {
+                tunedSpeed = 0.7f + (progress / 100f) * 0.8f
+                tvSpeedVal.text = String.format(java.util.Locale.US, "%.2fx", tunedSpeed)
+                speechManager.setFridayPitchAndSpeed(tunedPitch, tunedSpeed)
+            }
+            override fun onStartTrackingTouch(sb: SeekBar?) {}
+            override fun onStopTrackingTouch(sb: SeekBar?) {}
+        })
+
+        btnTest.setOnClickListener {
+            speechManager.speak("হ্যালো স্যার, আমি ফ্রাইডে। এই মিষ্টি কণ্ঠটি আপনার কেমন লাগছে?", SupportedLanguage.BENGALI)
+        }
 
         AlertDialog.Builder(this)
-            .setTitle("Switch AI Voice Persona")
-            .setSingleChoiceItems(items, currentIdx) { dialog, which ->
-                val selected = personas[which]
-                PersonaManager.setActivePersona(selected)
-                dialog.dismiss()
-                speechManager.previewPersona(selected, inBengali = true)
-                Toast.makeText(this, "${selected.displayName} voice activated!", Toast.LENGTH_SHORT).show()
+            .setView(dialogView)
+            .setPositiveButton("Save Voice") { _, _ ->
+                JarvisApp.instance.setFridayPitchAndSpeed(tunedPitch, tunedSpeed)
+                speechManager.setFridayPitchAndSpeed(tunedPitch, tunedSpeed)
+                Toast.makeText(this, "✓ F.R.I.D.A.Y. voice tuned & saved!", Toast.LENGTH_SHORT).show()
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton("Cancel") { _, _ ->
+                speechManager.setFridayPitchAndSpeed(currentPitch, currentSpeed)
+            }
             .show()
+    }
+
+    private fun renderRecordedCalls() {
+        val recordings = CallRecordingManager.getRecordedCalls(this)
+        layoutRecordingsContainer.removeAllViews()
+
+        if (recordings.isEmpty()) {
+            tvEmptyRecordings.visibility = View.VISIBLE
+            return
+        }
+        tvEmptyRecordings.visibility = View.GONE
+
+        recordings.forEach { item ->
+            val itemCard = layoutInflater.inflate(R.layout.item_recorded_call, layoutRecordingsContainer, false)
+            val tvFileName = itemCard.findViewById<TextView>(R.id.tvRecordingName)
+            val tvDetails = itemCard.findViewById<TextView>(R.id.tvRecordingDetails)
+            val btnPlay = itemCard.findViewById<Button>(R.id.btnPlayRecording)
+            val btnDelete = itemCard.findViewById<Button>(R.id.btnDeleteRecording)
+
+            tvFileName.text = "📞 ${item.caller}"
+            val durationText = if (item.durationSec > 0) "${item.durationSec}s • " else ""
+            tvDetails.text = "$durationText${item.formattedDate} • ${item.fileSizeKb} KB"
+
+            var isThisPlaying = false
+            btnPlay.setOnClickListener {
+                if (isThisPlaying) {
+                    CallRecordingManager.stopPlayback()
+                    btnPlay.text = "▶ Play"
+                    isThisPlaying = false
+                } else {
+                    val ok = CallRecordingManager.playRecording(this, item.filePath) {
+                        runOnUiThread {
+                            btnPlay.text = "▶ Play"
+                            isThisPlaying = false
+                        }
+                    }
+                    if (ok) {
+                        btnPlay.text = "⏹ Stop"
+                        isThisPlaying = true
+                    } else {
+                        Toast.makeText(this, "Failed to play recording", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+
+            btnDelete.setOnClickListener {
+                AlertDialog.Builder(this)
+                    .setTitle("Delete Recording")
+                    .setMessage("Are you sure you want to delete this recorded call?")
+                    .setPositiveButton("Delete") { _, _ ->
+                        CallRecordingManager.deleteRecording(this, item.id)
+                        renderRecordedCalls()
+                        Toast.makeText(this, "Recording deleted", Toast.LENGTH_SHORT).show()
+                    }
+                    .setNegativeButton("Cancel", null)
+                    .show()
+            }
+
+            layoutRecordingsContainer.addView(itemCard)
+        }
     }
 
     private fun observeAliases() {

@@ -34,7 +34,7 @@ class JarvisCallReceiver : BroadcastReceiver() {
                 handleCallAnswered()
             }
             TelephonyManager.EXTRA_STATE_IDLE -> {
-                handleCallEnded()
+                handleCallEnded(context)
             }
         }
     }
@@ -102,10 +102,11 @@ class JarvisCallReceiver : BroadcastReceiver() {
         activeRingingJob?.cancel()
     }
 
-    private fun handleCallEnded() {
-        Log.d(TAG, "Call ended or idle (IDLE). Resetting state.")
+    private fun handleCallEnded(context: Context) {
+        Log.d(TAG, "Call ended or idle (IDLE). Resetting state and stopping recording.")
         isCurrentlyRinging = false
         activeRingingJob?.cancel()
+        CallRecordingManager.stopRecording(context)
     }
 
     companion object {
