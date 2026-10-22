@@ -14,6 +14,7 @@ import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.speech.tts.Voice
 import android.util.Log
+import com.jarvis.assistant.JarvisApp
 import com.jarvis.assistant.nlp.SupportedLanguage
 import com.jarvis.assistant.persona.PersonaGender
 import com.jarvis.assistant.persona.PersonaManager

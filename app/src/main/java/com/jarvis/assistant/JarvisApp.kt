@@ -91,6 +91,13 @@ class JarvisApp : Application() {
         preferences.edit().putFloat(KEY_FRIDAY_SPEED, speed).apply()
     }
 
+    fun setFridayPitchAndSpeed(pitch: Float, speed: Float) {
+        preferences.edit()
+            .putFloat(KEY_FRIDAY_PITCH, pitch)
+            .putFloat(KEY_FRIDAY_SPEED, speed)
+            .apply()
+    }
+
     companion object {
         private const val PREFS_NAME = "jarvis_settings"
         private const val KEY_ANSWERING_MACHINE_ENABLED = "key_answering_machine_enabled"
