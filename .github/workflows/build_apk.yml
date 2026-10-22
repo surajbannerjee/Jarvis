@@ -30,15 +30,25 @@ jobs:
 
       - name: Build with Gradle
         run: |
+          set -o pipefail
           ./gradlew assembleDebug --stacktrace --no-daemon 2>&1 | tee gradle_build.log
 
-      - name: Report Build Error
-        if: failure()
+      - name: Report Build Output
+        if: always()
         run: |
-          echo "## ❌ Build Failure Details" >> $GITHUB_STEP_SUMMARY
+          echo "## 📋 Gradle Build Log (Last 100 lines)" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          tail -n 120 gradle_build.log >> $GITHUB_STEP_SUMMARY
+          tail -n 100 gradle_build.log >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "=== Checking APK output ==="
+          ls -la app/build/outputs/apk/debug/ || true
+
+      - name: Upload Build Log Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-build-log
+          path: gradle_build.log
 
       - name: Upload Debug APK to Artifacts
         uses: actions/upload-artifact@v4
