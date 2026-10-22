@@ -184,6 +184,32 @@
                     android:textSize="11sp"
                     android:layout_marginTop="2dp" />
 
+                <!-- Owner Voice Protection Switch -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="#22FFFFFF"
+                    android:layout_marginTop="10dp"
+                    android:layout_marginBottom="10dp" />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switchOwnerVoiceLock"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:checked="false"
+                    android:text="🔒 Owner Voice Lock (Suraj Boss Only)"
+                    android:textColor="@color/jarvis_gold"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Only obey commands from Suraj Boss. Rejects commands from unauthorized voices so others cannot control Friday."
+                    android:textColor="@color/text_secondary"
+                    android:textSize="11sp"
+                    android:layout_marginTop="2dp" />
+
             </LinearLayout>
 
             <!-- ═══ Arc Reactor Voice Assistant Card ═══ -->

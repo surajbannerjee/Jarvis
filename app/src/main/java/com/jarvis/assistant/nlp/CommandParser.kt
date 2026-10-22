@@ -36,6 +36,11 @@ sealed class JarvisIntent(open val language: SupportedLanguage) {
         override val language: SupportedLanguage
     ) : JarvisIntent(language)
 
+    data class Unauthorized(
+        val rawText: String,
+        override val language: SupportedLanguage
+    ) : JarvisIntent(language)
+
     data class Unknown(
         val rawText: String,
         override val language: SupportedLanguage
@@ -46,15 +51,15 @@ object CommandParser {
 
     // Common relationship aliases in South Asian languages & English
     val COMMON_RELATIONS = setOf(
-        "bou", "wife", "stri", "patni",
-        "maa", "ma", "mummy", "mom", "mother", "mataji",
-        "baba", "papa", "dad", "father", "pitaji",
-        "bhai", "brother", "dada", "bro",
-        "bon", "sister", "didi", "sis",
-        "boss", "sir", "manager",
-        "friend", "bondhu", "dost", "yaar",
-        "kaku", "uncle", "chacha", "mama",
-        "kaki", "aunt", "chachi", "mami"
+        "bou", "wife", "stri", "patni", "বউ", "স্ত্রী",
+        "maa", "ma", "mummy", "mom", "mother", "mataji", "মা", "মাথা",
+        "baba", "papa", "dad", "father", "pitaji", "বাবা", "পাপা",
+        "bhai", "brother", "dada", "bro", "ভাই", "দাদা",
+        "bon", "sister", "didi", "sis", "বোন", "দিদি",
+        "boss", "sir", "manager", "বস", "স্যার",
+        "friend", "bondhu", "dost", "yaar", "বন্ধু", "দোস্ত",
+        "kaku", "uncle", "chacha", "mama", "কাকা", "মামা",
+        "kaki", "aunt", "chachi", "mami", "কাকি", "মামি"
     )
 
     fun parse(input: String?): JarvisIntent {
@@ -62,8 +67,20 @@ object CommandParser {
             return JarvisIntent.Unknown("", SupportedLanguage.ENGLISH)
         }
 
+        val rawLower = input.lowercase(Locale.ROOT)
         val cleaned = cleanInput(input)
         val language = detectLanguage(cleaned)
+
+        // Check Owner Voice Security Lock if enabled
+        if (com.jarvis.assistant.JarvisApp.instance.isOwnerVoiceLockEnabled()) {
+            val hasOwnerMarker = rawLower.contains("suraj") || rawLower.contains("সুরজ") ||
+                    rawLower.contains("boss") || rawLower.contains("বস") ||
+                    rawLower.contains("amar") || rawLower.contains("আমার") ||
+                    rawLower.contains("friday") || rawLower.contains("ফ্রাইডে")
+            if (!hasOwnerMarker && cleaned.length > 5) {
+                return JarvisIntent.Unauthorized(cleaned, language)
+            }
+        }
 
         // 1. Try matching Training / Memory Intent
         val trainIntent = matchTrainingIntent(cleaned, language)
@@ -79,7 +96,7 @@ object CommandParser {
 
     private fun cleanInput(raw: String): String {
         return raw.trim()
-            .replace(Regex("^(hey\\s+|hi\\s+|hello\\s+)?(friday|jarvis)[,\\s]*", RegexOption.IGNORE_CASE), "")
+            .replace(Regex("^(hey\\s+|hi\\s+|hello\\s+|হে\\s+|হাই\\s+|হ্যালো\\s+)?(friday|jarvis|ফ্রাইডে|জার্ভিস)[,\\s]*", RegexOption.IGNORE_CASE), "")
             .replace(Regex("[?!.,]$"), "")
             .trim()
     }
@@ -196,19 +213,43 @@ object CommandParser {
     }
 
     private fun matchCallIntent(text: String, lang: SupportedLanguage): JarvisIntent.CallTarget? {
-        val lower = text.lowercase(Locale.ROOT)
+        val lower = text.lowercase(Locale.ROOT).trim()
 
-        // Bengali patterns:
-        // "amar bou ke call koro", "bou ke call koro", "Priyanka ke call koro", "maa ke phone lagao", "call koro amar bou ke"
+        // 1. Bengali Script Patterns ("প্রিয়াঙ্কাকে কল করো", "বউকে ফোন করো", "কল করো প্রিয়াঙ্কা")
+        val bnScriptPatterns = listOf(
+            Regex("(?:আমার\\s+)?(.+?)\\s*(?:কে|রে)?\\s*(?:কল|ফোন|ডায়াল|ডায়াল)\\s*(?:করো|করুন|কর|লাগান|লাগাও|দাও)?", RegexOption.IGNORE_CASE),
+            Regex("(?:কল|ফোন|ডায়াল|ডায়াল)\\s*(?:করো|করুন|কর|লাগান|লাগাও|দাও)?\\s*(?:আমার\\s+)?(.+?)(?:\\s*কে)?$", RegexOption.IGNORE_CASE),
+            Regex("(?:কল|ফোন)\\s+(.+)$", RegexOption.IGNORE_CASE),
+            Regex("(.+?)\\s*(?:কে|রে)\\s*(?:কল|ফোন)$", RegexOption.IGNORE_CASE)
+        )
+        for (p in bnScriptPatterns) {
+            val match = p.find(text)
+            if (match != null && match.groupValues.size >= 2) {
+                var raw = match.groupValues[1].trim()
+                    .replace(Regex("^(আমার|amr|amar)\\s+"), "")
+                    .replace(Regex("\\s*(কে|re|ke)$"), "")
+                    .trim()
+                if (raw.isNotEmpty() && !raw.contains("না") && raw != "করো" && raw != "ফোন") {
+                    val isRelation = COMMON_RELATIONS.contains(raw.lowercase(Locale.ROOT))
+                    return JarvisIntent.CallTarget(raw, isRelation, SupportedLanguage.BENGALI)
+                }
+            }
+        }
+
+        // 2. Banglish Patterns ("amar bou ke call koro", "call Priyanka", "Priyanka ke phone koro", "call koro Priyanka")
         val bnCallPatterns = listOf(
-            Regex("(?:amar\\s+)?(.+?)\\s+ke\\s+(?:call|phone|dial)\\s+(?:koro|korun|lagao)", RegexOption.IGNORE_CASE),
-            Regex("(?:call|phone|dial)\\s+koro\\s+(?:amar\\s+)?(.+?)(?:\\s+ke)?$", RegexOption.IGNORE_CASE),
-            Regex("(.+?)\\s+ke\\s+call$", RegexOption.IGNORE_CASE)
+            Regex("(?:amar\\s+)?(.+?)\\s+(?:ke|k)\\s+(?:call|phone|dial)\\s*(?:koro|korun|lagao|korte)?", RegexOption.IGNORE_CASE),
+            Regex("(?:call|phone|dial)\\s+(?:koro|korun|lagao|korte)?\\s*(?:amar\\s+)?(.+?)(?:\\s+(?:ke|k))?$", RegexOption.IGNORE_CASE),
+            Regex("(.+?)\\s+(?:ke|k)\\s+(?:call|phone|dial)$", RegexOption.IGNORE_CASE),
+            Regex("(?:call|phone|dial)\\s+(?:amar\\s+)?(.+)", RegexOption.IGNORE_CASE)
         )
         for (p in bnCallPatterns) {
             val match = p.find(text)
             if (match != null && match.groupValues.size >= 2) {
-                val rawTarget = match.groupValues[1].trim().replace("amar ", "").trim()
+                var rawTarget = match.groupValues[1].trim()
+                    .replace(Regex("^(amar|meri|my)\\s+", RegexOption.IGNORE_CASE), "")
+                    .replace(Regex("\\s+(ke|ko|k)$", RegexOption.IGNORE_CASE), "")
+                    .trim()
                 if (rawTarget.isNotEmpty()) {
                     val isRelation = COMMON_RELATIONS.contains(rawTarget.lowercase(Locale.ROOT))
                     return JarvisIntent.CallTarget(rawTarget, isRelation, SupportedLanguage.BENGALI)
@@ -216,7 +257,7 @@ object CommandParser {
             }
         }
 
-        // Hindi patterns:
+        // 3. Hindi patterns:
         // "mummy ko call lagao", "mera boss ko call karo", "Priyanka ko phone lagao"
         val hiCallPatterns = listOf(
             Regex("(?:mer(?:a|i)\\s+)?(.+?)\\s+ko\\s+(?:call|phone|dial)\\s+(?:lagao|karo|kijie)", RegexOption.IGNORE_CASE),
@@ -233,7 +274,7 @@ object CommandParser {
             }
         }
 
-        // English patterns:
+        // 4. English patterns:
         // "call my wife", "call Priyanka", "dial my boss", "phone my mother"
         val enCallPatterns = listOf(
             Regex("(?:please\\s+)?(?:call|dial|phone)\\s+(?:my\\s+)?(.+)", RegexOption.IGNORE_CASE),

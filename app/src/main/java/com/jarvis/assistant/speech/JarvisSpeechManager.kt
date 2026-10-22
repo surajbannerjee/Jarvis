@@ -175,6 +175,7 @@ class JarvisSpeechManager private constructor(private val context: Context) :
         streamType: Int = AudioManager.STREAM_MUSIC,
         onComplete: (() -> Unit)? = null
     ) {
+        stopListening()
         if (!isTtsInitialized || tts == null) {
             Log.w(TAG, "TTS not ready yet. Dropping text: $text")
             onComplete?.invoke()

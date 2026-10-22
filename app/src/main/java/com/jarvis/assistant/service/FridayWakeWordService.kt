@@ -32,6 +32,7 @@ class FridayWakeWordService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        instance = this
         Log.d(TAG, "FridayWakeWordService created.")
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, buildForegroundNotification())
@@ -50,7 +51,7 @@ class FridayWakeWordService : Service() {
     }
 
     private fun startListeningLoop() {
-        if (isDestroyed || !JarvisApp.instance.isWakeWordEnabled()) return
+        if (isDestroyed || isForegroundActive || !JarvisApp.instance.isWakeWordEnabled()) return
 
         handler.post {
             try {
@@ -73,9 +74,32 @@ class FridayWakeWordService : Service() {
                 Log.d(TAG, "Friday continuous wake-word listening active.")
             } catch (e: Exception) {
                 Log.e(TAG, "Error starting speech recognizer in wake-word service", e)
-                restartAfterDelay(1500)
+                restartAfterDelay(2000)
             }
         }
+    }
+
+    fun pauseListening() {
+        handler.removeCallbacksAndMessages(null)
+        isListening = false
+        try {
+            speechRecognizer?.stopListening()
+            speechRecognizer?.destroy()
+        } catch (e: Exception) {
+            Log.w(TAG, "Error destroying recognizer on pause", e)
+        }
+        speechRecognizer = null
+        Log.d(TAG, "FridayWakeWordService paused — foreground app active.")
+    }
+
+    fun resumeListening() {
+        if (isDestroyed || isForegroundActive || !JarvisApp.instance.isWakeWordEnabled()) return
+        handler.removeCallbacksAndMessages(null)
+        handler.postDelayed({
+            if (!isDestroyed && !isForegroundActive && JarvisApp.instance.isWakeWordEnabled()) {
+                startListeningLoop()
+            }
+        }, 1000)
     }
 
     private fun createListener(): RecognitionListener {
@@ -90,12 +114,13 @@ class FridayWakeWordService : Service() {
 
             override fun onError(error: Int) {
                 isListening = false
-                // Normal timeout/no match -> restart immediately
+                if (isForegroundActive || isDestroyed) return
+                // Gentle delay to prevent rapid mic on/off flickering
                 val delayMs = when (error) {
                     SpeechRecognizer.ERROR_NO_MATCH,
-                    SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> 300L
-                    SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> 1000L
-                    else -> 1500L
+                    SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> 1200L
+                    SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> 2500L
+                    else -> 2000L
                 }
                 restartAfterDelay(delayMs)
             }
@@ -103,8 +128,10 @@ class FridayWakeWordService : Service() {
             override fun onResults(results: Bundle?) {
                 isListening = false
                 val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                checkMatchesForWakeWord(matches)
-                restartAfterDelay(400)
+                val triggered = checkMatchesForWakeWord(matches)
+                if (!triggered && !isForegroundActive) {
+                    restartAfterDelay(800)
+                }
             }
 
             override fun onPartialResults(partialResults: Bundle?) {
@@ -116,8 +143,8 @@ class FridayWakeWordService : Service() {
         }
     }
 
-    private fun checkMatchesForWakeWord(matches: List<String>?) {
-        if (matches.isNullOrEmpty()) return
+    private fun checkMatchesForWakeWord(matches: List<String>?): Boolean {
+        if (matches.isNullOrEmpty()) return false
 
         for (text in matches) {
             val lower = text.lowercase(Locale.ROOT)
@@ -127,16 +154,22 @@ class FridayWakeWordService : Service() {
             ) {
                 Log.d(TAG, "WAKE WORD TRIGGERED via phrase: '$text'")
                 triggerAssistantWakeup(text)
-                break
+                return true
             }
         }
+        return false
     }
 
     private fun triggerAssistantWakeup(triggerText: String) {
-        // Play signature wake audio
-        CustomAudioPlayer.playCustomAudio(this, "friday_greeting")
+        handler.removeCallbacksAndMessages(null)
+        isListening = false
+        try {
+            speechRecognizer?.stopListening()
+            speechRecognizer?.destroy()
+        } catch (e: Exception) {}
+        speechRecognizer = null
 
-        // Launch MainActivity and activate voice assistant
+        // Launch MainActivity cleanly without audio bleeding into the microphone
         val launchIntent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
             putExtra(EXTRA_TRIGGER_VOICE, true)
@@ -192,6 +225,7 @@ class FridayWakeWordService : Service() {
         super.onDestroy()
         isDestroyed = true
         isListening = false
+        if (instance == this) instance = null
         handler.removeCallbacksAndMessages(null)
         try {
             speechRecognizer?.destroy()
@@ -211,6 +245,19 @@ class FridayWakeWordService : Service() {
 
         const val EXTRA_TRIGGER_VOICE = "extra_trigger_voice"
         const val EXTRA_TRIGGER_QUERY = "extra_trigger_query"
+
+        @Volatile
+        private var isForegroundActive = false
+        private var instance: FridayWakeWordService? = null
+
+        fun setForegroundActive(active: Boolean) {
+            isForegroundActive = active
+            if (active) {
+                instance?.pauseListening()
+            } else {
+                instance?.resumeListening()
+            }
+        }
 
         fun start(context: Context) {
             val intent = Intent(context, FridayWakeWordService::class.java)

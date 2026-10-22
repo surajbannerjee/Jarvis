@@ -98,6 +98,14 @@ class JarvisApp : Application() {
             .apply()
     }
 
+    fun isOwnerVoiceLockEnabled(): Boolean {
+        return preferences.getBoolean(KEY_OWNER_VOICE_LOCK, false)
+    }
+
+    fun setOwnerVoiceLockEnabled(enabled: Boolean) {
+        preferences.edit().putBoolean(KEY_OWNER_VOICE_LOCK, enabled).apply()
+    }
+
     companion object {
         private const val PREFS_NAME = "jarvis_settings"
         private const val KEY_ANSWERING_MACHINE_ENABLED = "key_answering_machine_enabled"
@@ -108,6 +116,7 @@ class JarvisApp : Application() {
         private const val KEY_CALL_RECORDING_ENABLED = "key_call_recording_enabled"
         private const val KEY_FRIDAY_PITCH = "key_friday_pitch"
         private const val KEY_FRIDAY_SPEED = "key_friday_speed"
+        private const val KEY_OWNER_VOICE_LOCK = "key_owner_voice_lock"
 
         /**
          * Paste your Google Gemini API Key here if you want it pre-configured inside the APK:

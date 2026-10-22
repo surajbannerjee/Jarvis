@@ -71,6 +71,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnTuneVoice: Button
     private lateinit var btnPreviewVoice: Button
     private lateinit var switchWakeWord: MaterialSwitch
+    private lateinit var switchOwnerVoiceLock: MaterialSwitch
 
     // Voice Assistant Views
     private lateinit var btnMic: ImageButton
@@ -202,24 +203,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // Google Voice Recognition fallback launcher
-    private val googleSpeechLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        setListeningUi(false)
-        if (result.resultCode == Activity.RESULT_OK) {
-            val matches = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
-            val spokenText = matches?.firstOrNull()
-            if (!spokenText.isNullOrBlank()) {
-                tvVoiceStatus.text = getString(R.string.tap_to_speak)
-                tvRecognizedSpeech.text = "You said: \"$spokenText\""
-                tvRecognizedSpeech.visibility = View.VISIBLE
-                processVoiceCommand(spokenText)
-            }
-        } else {
-            tvVoiceStatus.text = getString(R.string.tap_to_speak)
-        }
-    }
+
 
     // Audio File Picker for Custom Voice Clips
     private val audioPickerLauncher = registerForActivityResult(
@@ -270,12 +254,20 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        FridayWakeWordService.setForegroundActive(true)
         checkAndUpdatePermissionStatuses()
         updateCustomAudioUi()
     }
 
+    override fun onPause() {
+        super.onPause()
+        FridayWakeWordService.setForegroundActive(false)
+        stopVoiceAssistant()
+    }
+
     override fun onDestroy() {
         super.onDestroy()
+        FridayWakeWordService.setForegroundActive(false)
         stopPulseAnimation()
         CustomAudioPlayer.stopAudio()
     }
@@ -290,6 +282,8 @@ class MainActivity : AppCompatActivity() {
         btnPreviewVoice = findViewById(R.id.btnPreviewVoice)
         switchWakeWord = findViewById(R.id.switchWakeWord)
         switchWakeWord.isChecked = JarvisApp.instance.isWakeWordEnabled()
+        switchOwnerVoiceLock = findViewById(R.id.switchOwnerVoiceLock)
+        switchOwnerVoiceLock.isChecked = JarvisApp.instance.isOwnerVoiceLockEnabled()
 
         btnMic = findViewById(R.id.btnMic)
         tvVoiceStatus = findViewById(R.id.tvVoiceStatus)
@@ -381,6 +375,16 @@ class MainActivity : AppCompatActivity() {
                 FridayWakeWordService.stop(this)
                 Toast.makeText(this, "Friday wake-word disabled.", Toast.LENGTH_SHORT).show()
             }
+        }
+
+        switchOwnerVoiceLock.setOnCheckedChangeListener { _, isChecked ->
+            JarvisApp.instance.setOwnerVoiceLockEnabled(isChecked)
+            val msg = if (isChecked) {
+                "🔒 Owner Voice Lock active: Friday will only obey Suraj Boss"
+            } else {
+                "Owner Voice Lock disabled"
+            }
+            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
         }
 
         btnPreviewVoice.setOnClickListener {
@@ -790,6 +794,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startVoiceAssistant() {
+        speechManager.stopSpeaking()
+        CustomAudioPlayer.stopAudio()
         isListening = true
         setListeningUi(true)
 
@@ -810,15 +816,10 @@ class MainActivity : AppCompatActivity() {
                 }
             },
             onError = { error ->
-                Log.w(tag, "Native SpeechRecognizer error: $error. Falling back to Google Speech Dialog...")
+                Log.w(tag, "Native SpeechRecognizer error: $error")
                 runOnUiThread {
                     setListeningUi(false)
-                    try {
-                        googleSpeechLauncher.launch(speechManager.createRecognizerIntent(SupportedLanguage.BENGALI))
-                    } catch (e: Exception) {
-                        tvVoiceStatus.text = "Voice error: $error"
-                        Toast.makeText(this, "Voice recognition error: $error", Toast.LENGTH_SHORT).show()
-                    }
+                    tvVoiceStatus.text = getString(R.string.tap_to_speak)
                 }
             }
         )
@@ -900,7 +901,8 @@ class MainActivity : AppCompatActivity() {
 
                 is JarvisIntent.CallTarget -> {
                     val target = intent.target.trim()
-                    val alias = JarvisApp.instance.database.aliasDao().findByTag(target)
+                    val targetLower = target.lowercase(Locale.ROOT)
+                    val alias = JarvisApp.instance.database.aliasDao().findByTag(targetLower)
 
                     val contactToCall = alias?.actualContactName ?: target
                     var phoneToCall: String? = null
@@ -915,30 +917,56 @@ class MainActivity : AppCompatActivity() {
                     }
 
                     if (phoneToCall.isNullOrBlank()) {
+                        phoneToCall = ContactHelper.getPhoneNumberForContact(this@MainActivity, contactToCall)
+                    }
+                    if (phoneToCall.isNullOrBlank()) {
                         phoneToCall = ContactHelper.getPhoneNumberForContact(this@MainActivity, target)
                     }
 
                     if (phoneToCall != null) {
                         val reply = when (intent.language) {
-                            SupportedLanguage.BENGALI -> "$contactToCall ke call korchi..."
-                            SupportedLanguage.HINDI -> "$contactToCall ko call laga raha hoon..."
+                            SupportedLanguage.BENGALI -> "$contactToCall-কে কল করছি..."
+                            SupportedLanguage.HINDI -> "$contactToCall को कॉल लगा रही हूँ..."
                             SupportedLanguage.ENGLISH -> "Calling $contactToCall now..."
-                        }
-                        withContext(Dispatchers.Main) {
-                            speechManager.speak(reply, intent.language) {
-                                ContactHelper.makePhoneCall(this@MainActivity, phoneToCall)
-                            }
-                        }
-                    } else {
-                        val reply = when (intent.language) {
-                            SupportedLanguage.BENGALI -> "$contactToCall er kono phone number khuje pelam na."
-                            SupportedLanguage.HINDI -> "$contactToCall ka phone number nahi mila."
-                            SupportedLanguage.ENGLISH -> "Could not find a phone number for $contactToCall."
                         }
                         withContext(Dispatchers.Main) {
                             speechManager.speak(reply, intent.language)
                             Toast.makeText(this@MainActivity, reply, Toast.LENGTH_SHORT).show()
+                            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                                val callStarted = ContactHelper.makePhoneCall(this@MainActivity, phoneToCall)
+                                if (!callStarted) {
+                                    val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${Uri.encode(phoneToCall)}"))
+                                    startActivity(dialIntent)
+                                }
+                            }, 700)
                         }
+                    } else {
+                        val reply = when (intent.language) {
+                            SupportedLanguage.BENGALI -> "$contactToCall-এর নম্বর কনট্যাক্টে পাওয়া যায়নি। ডায়ালারে খুলছি..."
+                            SupportedLanguage.HINDI -> "$contactToCall का नंबर नहीं मिला। डायलर खोल रही हूँ..."
+                            SupportedLanguage.ENGLISH -> "Could not find a phone number for $contactToCall. Opening dialer..."
+                        }
+                        withContext(Dispatchers.Main) {
+                            speechManager.speak(reply, intent.language)
+                            Toast.makeText(this@MainActivity, reply, Toast.LENGTH_SHORT).show()
+                            val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${Uri.encode(target)}"))
+                            try {
+                                startActivity(dialIntent)
+                            } catch (e: Exception) {}
+                        }
+                    }
+                }
+
+                is JarvisIntent.Unauthorized -> {
+                    val reply = when (intent.language) {
+                        SupportedLanguage.BENGALI -> "Access restricted. সিকিউরিটি লক সক্রিয় রয়েছে, আমি শুধুমাত্র সুরজ স্যারের ভয়েস কমান্ড মানতে বাধ্য।"
+                        SupportedLanguage.HINDI -> "Access restricted. सुरक्षा लॉक सक्रिय है, मैं केवल सूरज सर के वॉइस कमांड मानती हूँ।"
+                        SupportedLanguage.ENGLISH -> "Access restricted. Owner voice protection is active. I only respond to Suraj Boss."
+                    }
+                    withContext(Dispatchers.Main) {
+                        tvAiAssistantReply.text = "F.R.I.D.A.Y.: '$reply'"
+                        speechManager.speak(reply, intent.language)
+                        Toast.makeText(this@MainActivity, reply, Toast.LENGTH_SHORT).show()
                     }
                 }
 
