@@ -83,7 +83,7 @@ object JarvisAiBrain {
         val geminiKey = JarvisApp.instance.getGeminiApiKey()
 
         val prompt = if (isCall) {
-            "Generate a polite, sweet, natural auto-voicemail in Bengali from Friday to $senderName. Exactly state that Boss is busy right now, politely ask if they have any urgent or important message so they can tell Friday right now and Friday will inform Boss as soon as he is free, and thank them. Keep it warm and natural in Bengali."
+            "Generate a polite, sweet, natural auto-voicemail in Bengali from Friday to $senderName. Exactly say: 'হ্যালো, আমি ফ্রাইডে, সুরজ স্যার এর পার্সোনাল এআই অ্যাসিস্ট্যান্ট বলছি। স্যার এখন একটি জরুরি কাজে ব্যস্ত আছেন, তাই ফোন ধরতে পারছেন না। আপনার কি কোনো আর্জেন্ট কথা আছে? তাহলে আমাকে বলে রাখুন, স্যার ফাঁকা হলেই আমি উনাকে সাথে সাথে জানিয়ে দেব। ধন্যবাদ!' Keep it sweet, polite, and natural in Bengali."
         } else {
             "Generate a smart, polite 1-sentence WhatsApp auto-reply in Bengali from ${persona.displayName} to $senderName regarding message: '${messageText ?: ""}'. State Boss will read it shortly."
         }
@@ -99,9 +99,9 @@ object JarvisAiBrain {
 
         // Fallback local Stark smart reply
         return@withContext if (isCall) {
-            "হ্যালো, আমি ফ্রাইডে বলছি। বস এখন একটি কাজে ব্যস্ত আছেন, তাই ফোন ধরতে পারছেন না। আপনার কি কোনো আর্জেন্ট কথা আছে? তাহলে আমাকে বলে রাখুন, বস ফাঁকা হলেই আমি উনাকে সাথে সাথে জানিয়ে দেব। ধন্যবাদ!"
+            "হ্যালো, আমি ফ্রাইডে, সুরজ স্যার এর পার্সোনাল এআই অ্যাসিস্ট্যান্ট বলছি। স্যার এখন একটি জরুরি কাজে ব্যস্ত আছেন, তাই ফোন ধরতে পারছেন না। আপনার কি কোনো আর্জেন্ট কথা আছে? তাহলে আমাকে বলে রাখুন, স্যার ফাঁকা হলেই আমি উনাকে সাথে সাথে জানিয়ে দেব। ধন্যবাদ!"
         } else {
-            "হ্যালো $senderName! আমি ফ্রাইডে বলছি। আপনার মেসেজটি পেয়েছি। বস এখন একটু ব্যস্ত আছেন, ফাঁকা হলেই রিপ্লাই করবেন।"
+            "হ্যালো $senderName! আমি ফ্রাইডে বলছি। আপনার মেসেজটি পেয়েছি। সুরজ স্যার এখন একটু ব্যস্ত আছেন, ফাঁকা হলেই রিপ্লাই করবেন।"
         }
     }
 
