@@ -50,6 +50,17 @@ jobs:
           name: gradle-build-log
           path: gradle_build.log
 
+      - name: Push Build Error Log Branch
+        if: failure()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -B build-failure-log
+          tail -n 300 gradle_build.log > build_error.txt
+          git add build_error.txt
+          git commit -m "Auto-commit build error log [skip ci]" || true
+          git push -f origin build-failure-log || true
+
       - name: Upload Debug APK to Artifacts
         uses: actions/upload-artifact@v4
         with:
