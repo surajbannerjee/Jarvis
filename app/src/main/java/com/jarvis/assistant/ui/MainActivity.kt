@@ -704,12 +704,31 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
+                is JarvisIntent.WhatsAppQuery -> {
+                    val reply = when (intent.language) {
+                        SupportedLanguage.BENGALI -> "WhatsApp notification monitoring active ache."
+                        SupportedLanguage.HINDI -> "WhatsApp notification monitoring sakriya hai."
+                        SupportedLanguage.ENGLISH -> "WhatsApp notification monitoring is active."
+                    }
+                    withContext(Dispatchers.Main) {
+                        speechManager.speak(reply, intent.language)
+                        Toast.makeText(this@MainActivity, reply, Toast.LENGTH_SHORT).show()
+                    }
+                }
+
                 is JarvisIntent.Unknown -> {
                     val reply = when (intent.language) {
                         SupportedLanguage.BENGALI -> "Ami thik bujhte parlam na. Abar bolun."
                         SupportedLanguage.HINDI -> "Mujhe samajh nahi aaya. Kripya dobara bolein."
                         SupportedLanguage.ENGLISH -> "I could not understand that directive. Please repeat."
                     }
+                    withContext(Dispatchers.Main) {
+                        speechManager.speak(reply, intent.language)
+                    }
+                }
+
+                else -> {
+                    val reply = "Command not recognized."
                     withContext(Dispatchers.Main) {
                         speechManager.speak(reply, intent.language)
                     }
