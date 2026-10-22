@@ -42,16 +42,22 @@ jobs:
         if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.2.0
-          name: Jarvis Assistant v1.2.0 (Custom Audio & Priyanka Memory Update)
+          tag_name: v1.3.0
+          name: Jarvis Assistant v1.3.0 (Contact Picker & Custom Voice Studio)
           body: |
-            ### 🚀 Jarvis Assistant v1.2.0
+            ### 🚀 Jarvis Assistant v1.3.0
             Download and install the APK directly on your phone!
             
             #### 🌟 What's New:
-            - **Custom Audio Clips Support**: Now supports playing real MP3/WAV audio files for greetings, caller announcements, and voicemails!
-            - **Updated Relationship Memory Defaults**: Changed all references and prompts to 'Priyanka'.
-            - **Stark AI Persona Engine**: Full 10 Iron Man AIs with custom audio fallback to TTS.
+            - **Phone Contact Picker**: In 'Train New Relationship', tap 'Choose Contact from Phone' or click the contact name field to pick contacts directly from your address book (auto-fills saved name & number).
+            - **Quick Relation Chips**: Instant one-tap relation tags (bou, maa, baba, vai, boss, friend).
+            - **Fixed Voice Assistant**: 100% working Arc Reactor voice button with pulsing listening animation, native Bengali/Hindi/English STT, and Google Speech Recognizer fallback.
+            - **Custom Voice Studio**: Upload your own downloaded MP3/WAV audio files for:
+              1. Assistant Greeting Voice
+              2. Answering Machine Voicemail
+              3. Incoming Caller Alert
+            - **Instant Voice Preview**: In-app play/stop buttons to test uploaded custom voice clips and AI personas.
+          files: app/build/outputs/apk/debug/*.apk
             
             #### 🌟 New: 10 Iconic Stark AI Persona Voices:
             - **J.A.R.V.I.S.** (Calm British butler AI)

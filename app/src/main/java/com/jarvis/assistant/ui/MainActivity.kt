@@ -1,6 +1,9 @@
 package com.jarvis.assistant.ui
 
 import android.Manifest
+import android.animation.ObjectAnimator
+import android.animation.ValueAnimator
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -8,9 +11,12 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
+import android.provider.ContactsContract
 import android.provider.Settings
+import android.speech.RecognizerIntent
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.Button
@@ -29,6 +35,9 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.materialswitch.MaterialSwitch
 import com.jarvis.assistant.JarvisApp
 import com.jarvis.assistant.R
+import com.jarvis.assistant.audio.AudioSlot
+import com.jarvis.assistant.audio.CustomAudioPlayer
+import com.jarvis.assistant.audio.CustomVoiceStorage
 import com.jarvis.assistant.contacts.ContactHelper
 import com.jarvis.assistant.data.entity.AliasEntity
 import com.jarvis.assistant.nlp.CommandParser
@@ -46,6 +55,8 @@ import kotlinx.coroutines.withContext
 
 class MainActivity : AppCompatActivity() {
 
+    private val tag = "MainActivity"
+
     // Header & Persona Views
     private lateinit var tvAppTitle: TextView
     private lateinit var tvPersonaDisplayName: TextView
@@ -59,6 +70,29 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnMic: ImageButton
     private lateinit var tvVoiceStatus: TextView
     private lateinit var tvRecognizedSpeech: TextView
+    private lateinit var btnStopSpeech: Button
+
+    // Quick Voice Test Chips
+    private var chipVoiceBouCall: Button? = null
+    private var chipVoiceMaaCall: Button? = null
+    private var chipVoicePriyanka: Button? = null
+    private var chipVoiceBossCall: Button? = null
+
+    // Custom Voice Audio Views
+    private lateinit var tvGreetingStatus: TextView
+    private lateinit var btnSelectGreeting: Button
+    private lateinit var btnTestGreeting: Button
+    private lateinit var btnRemoveGreeting: Button
+
+    private lateinit var tvVoicemailStatus: TextView
+    private lateinit var btnSelectVoicemail: Button
+    private lateinit var btnTestVoicemail: Button
+    private lateinit var btnRemoveVoicemail: Button
+
+    private lateinit var tvCallerStatus: TextView
+    private lateinit var btnSelectCallerAudio: Button
+    private lateinit var btnTestCallerAudio: Button
+    private lateinit var btnRemoveCallerAudio: Button
 
     // Permissions Views
     private lateinit var btnGrantCorePerms: Button
@@ -77,6 +111,17 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var aliasAdapter: AliasAdapter
     private val speechManager: JarvisSpeechManager by lazy { JarvisApp.instance.speechManager }
+
+    private var isListening = false
+    private var pulseAnimatorX: ObjectAnimator? = null
+    private var pulseAnimatorY: ObjectAnimator? = null
+
+    // For Train Relationship Dialog Contact Picking
+    private var activeDialogEtName: EditText? = null
+    private var activeDialogEtPhone: EditText? = null
+
+    // For Custom Voice Audio Picking
+    private var pendingAudioSlot: AudioSlot? = null
 
     private val corePermissions = mutableListOf(
         Manifest.permission.RECORD_AUDIO,
@@ -102,6 +147,70 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private val micPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            startVoiceAssistant()
+        } else {
+            Toast.makeText(this, "Microphone permission is required for voice commands", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // Contact Picker Launcher for Train Relationship Dialog
+    private val contactPickerLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val contactUri = result.data?.data
+            if (contactUri != null) {
+                val (name, phone) = ContactHelper.getContactDetailsFromUri(this, contactUri)
+                if (!name.isNullOrBlank()) {
+                    activeDialogEtName?.setText(name)
+                }
+                if (!phone.isNullOrBlank()) {
+                    activeDialogEtPhone?.setText(phone)
+                }
+                Toast.makeText(this, "Selected: ${name ?: "Contact"}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    // Google Voice Recognition fallback launcher
+    private val googleSpeechLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        setListeningUi(false)
+        if (result.resultCode == Activity.RESULT_OK) {
+            val matches = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+            val spokenText = matches?.firstOrNull()
+            if (!spokenText.isNullOrBlank()) {
+                tvVoiceStatus.text = getString(R.string.tap_to_speak)
+                tvRecognizedSpeech.text = "You said: \"$spokenText\""
+                tvRecognizedSpeech.visibility = View.VISIBLE
+                processVoiceCommand(spokenText)
+            }
+        } else {
+            tvVoiceStatus.text = getString(R.string.tap_to_speak)
+        }
+    }
+
+    // Audio File Picker for Custom Voice Clips
+    private val audioPickerLauncher = registerForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        val slot = pendingAudioSlot ?: return@registerForActivityResult
+        if (uri != null) {
+            val success = CustomVoiceStorage.saveAudioFromUri(this, uri, slot)
+            if (success) {
+                Toast.makeText(this, "✓ Custom voice uploaded for ${slot.title}", Toast.LENGTH_SHORT).show()
+                updateCustomAudioUi()
+            } else {
+                Toast.makeText(this, "Failed to import selected audio file", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -111,11 +220,19 @@ class MainActivity : AppCompatActivity() {
         setupListeners()
         observeAliases()
         observePersona()
+        updateCustomAudioUi()
     }
 
     override fun onResume() {
         super.onResume()
         checkAndUpdatePermissionStatuses()
+        updateCustomAudioUi()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        stopPulseAnimation()
+        CustomAudioPlayer.stopAudio()
     }
 
     private fun initViews() {
@@ -130,6 +247,29 @@ class MainActivity : AppCompatActivity() {
         btnMic = findViewById(R.id.btnMic)
         tvVoiceStatus = findViewById(R.id.tvVoiceStatus)
         tvRecognizedSpeech = findViewById(R.id.tvRecognizedSpeech)
+        btnStopSpeech = findViewById(R.id.btnStopSpeech)
+
+        chipVoiceBouCall = findViewById(R.id.chipVoiceBouCall)
+        chipVoiceMaaCall = findViewById(R.id.chipVoiceMaaCall)
+        chipVoicePriyanka = findViewById(R.id.chipVoicePriyanka)
+        chipVoiceBossCall = findViewById(R.id.chipVoiceBossCall)
+
+        // Custom Voice Slots
+        tvGreetingStatus = findViewById(R.id.tvGreetingStatus)
+        btnSelectGreeting = findViewById(R.id.btnSelectGreeting)
+        btnTestGreeting = findViewById(R.id.btnTestGreeting)
+        btnRemoveGreeting = findViewById(R.id.btnRemoveGreeting)
+
+        tvVoicemailStatus = findViewById(R.id.tvVoicemailStatus)
+        btnSelectVoicemail = findViewById(R.id.btnSelectVoicemail)
+        btnTestVoicemail = findViewById(R.id.btnTestVoicemail)
+        btnRemoveVoicemail = findViewById(R.id.btnRemoveVoicemail)
+
+        tvCallerStatus = findViewById(R.id.tvCallerStatus)
+        btnSelectCallerAudio = findViewById(R.id.btnSelectCallerAudio)
+        btnTestCallerAudio = findViewById(R.id.btnTestCallerAudio)
+        btnRemoveCallerAudio = findViewById(R.id.btnRemoveCallerAudio)
+
         btnGrantCorePerms = findViewById(R.id.btnGrantCorePerms)
         btnGrantNotification = findViewById(R.id.btnGrantNotification)
         btnGrantAccessibility = findViewById(R.id.btnGrantAccessibility)
@@ -161,10 +301,73 @@ class MainActivity : AppCompatActivity() {
 
         btnPreviewVoice.setOnClickListener {
             val persona = PersonaManager.getActivePersona()
-            speechManager.previewPersona(persona)
-            Toast.makeText(this, "Playing ${persona.displayName} voice preview...", Toast.LENGTH_SHORT).show()
+            speechManager.previewPersona(persona, inBengali = true)
+            Toast.makeText(this, "Playing ${persona.displayName} signature preview...", Toast.LENGTH_SHORT).show()
         }
 
+        btnMic.setOnClickListener {
+            toggleVoiceAssistant()
+        }
+
+        btnStopSpeech.setOnClickListener {
+            stopVoiceAssistant()
+        }
+
+        // Quick Directive Voice Chips
+        chipVoiceBouCall?.setOnClickListener {
+            runVoiceChipDirective("Amar bou ke call koro")
+        }
+        chipVoiceMaaCall?.setOnClickListener {
+            runVoiceChipDirective("Mummy ko call lagao")
+        }
+        chipVoicePriyanka?.setOnClickListener {
+            runVoiceChipDirective("Jarvis, amar bou er nam Priyanka")
+        }
+        chipVoiceBossCall?.setOnClickListener {
+            runVoiceChipDirective("Call my boss")
+        }
+
+        // Custom Audio Uploader Listeners
+        btnSelectGreeting.setOnClickListener {
+            pendingAudioSlot = AudioSlot.GREETING
+            audioPickerLauncher.launch("audio/*")
+        }
+        btnTestGreeting.setOnClickListener {
+            togglePlayAudioSlot(AudioSlot.GREETING, btnTestGreeting)
+        }
+        btnRemoveGreeting.setOnClickListener {
+            CustomVoiceStorage.clearAudio(this, AudioSlot.GREETING)
+            updateCustomAudioUi()
+            Toast.makeText(this, "Assistant Greeting voice reset to TTS", Toast.LENGTH_SHORT).show()
+        }
+
+        btnSelectVoicemail.setOnClickListener {
+            pendingAudioSlot = AudioSlot.VOICEMAIL
+            audioPickerLauncher.launch("audio/*")
+        }
+        btnTestVoicemail.setOnClickListener {
+            togglePlayAudioSlot(AudioSlot.VOICEMAIL, btnTestVoicemail)
+        }
+        btnRemoveVoicemail.setOnClickListener {
+            CustomVoiceStorage.clearAudio(this, AudioSlot.VOICEMAIL)
+            updateCustomAudioUi()
+            Toast.makeText(this, "Answering Machine voicemail reset to TTS", Toast.LENGTH_SHORT).show()
+        }
+
+        btnSelectCallerAudio.setOnClickListener {
+            pendingAudioSlot = AudioSlot.CALLER_ALERT
+            audioPickerLauncher.launch("audio/*")
+        }
+        btnTestCallerAudio.setOnClickListener {
+            togglePlayAudioSlot(AudioSlot.CALLER_ALERT, btnTestCallerAudio)
+        }
+        btnRemoveCallerAudio.setOnClickListener {
+            CustomVoiceStorage.clearAudio(this, AudioSlot.CALLER_ALERT)
+            updateCustomAudioUi()
+            Toast.makeText(this, "Caller Alert audio reset to TTS", Toast.LENGTH_SHORT).show()
+        }
+
+        // Permission buttons
         btnGrantCorePerms.setOnClickListener {
             permissionLauncher.launch(corePermissions.toTypedArray())
         }
@@ -192,10 +395,6 @@ class MainActivity : AppCompatActivity() {
             showAddAliasDialog()
         }
 
-        btnMic.setOnClickListener {
-            startVoiceAssistant()
-        }
-
         switchAnsweringMachine.setOnCheckedChangeListener { _, isChecked ->
             JarvisApp.instance.setAnsweringMachineEnabled(isChecked)
         }
@@ -212,6 +411,79 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
+    private fun runVoiceChipDirective(directive: String) {
+        tvVoiceStatus.text = "Directive: \"$directive\""
+        tvRecognizedSpeech.text = "You said: \"$directive\""
+        tvRecognizedSpeech.visibility = View.VISIBLE
+        processVoiceCommand(directive)
+    }
+
+    private fun updateCustomAudioUi() {
+        val greetingFile = CustomVoiceStorage.getAudioFile(this, AudioSlot.GREETING)
+        if (greetingFile != null) {
+            val sizeKb = greetingFile.length() / 1024
+            tvGreetingStatus.text = "✓ Custom Voice Active (${sizeKb} KB)"
+            tvGreetingStatus.setTextColor(ContextCompat.getColor(this, R.color.jarvis_success))
+            btnRemoveGreeting.visibility = View.VISIBLE
+        } else {
+            tvGreetingStatus.text = "Default TTS (${PersonaManager.getActivePersona().displayName})"
+            tvGreetingStatus.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
+            btnRemoveGreeting.visibility = View.GONE
+        }
+
+        val voicemailFile = CustomVoiceStorage.getAudioFile(this, AudioSlot.VOICEMAIL)
+        if (voicemailFile != null) {
+            val sizeKb = voicemailFile.length() / 1024
+            tvVoicemailStatus.text = "✓ Custom Audio Active (${sizeKb} KB)"
+            tvVoicemailStatus.setTextColor(ContextCompat.getColor(this, R.color.jarvis_success))
+            btnRemoveVoicemail.visibility = View.VISIBLE
+        } else {
+            tvVoicemailStatus.text = "Default TTS (${PersonaManager.getActivePersona().displayName})"
+            tvVoicemailStatus.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
+            btnRemoveVoicemail.visibility = View.GONE
+        }
+
+        val callerFile = CustomVoiceStorage.getAudioFile(this, AudioSlot.CALLER_ALERT)
+        if (callerFile != null) {
+            val sizeKb = callerFile.length() / 1024
+            tvCallerStatus.text = "✓ Custom Audio Active (${sizeKb} KB)"
+            tvCallerStatus.setTextColor(ContextCompat.getColor(this, R.color.jarvis_success))
+            btnRemoveCallerAudio.visibility = View.VISIBLE
+        } else {
+            tvCallerStatus.text = "Default TTS (${PersonaManager.getActivePersona().displayName})"
+            tvCallerStatus.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
+            btnRemoveCallerAudio.visibility = View.GONE
+        }
+    }
+
+    private fun togglePlayAudioSlot(slot: AudioSlot, testButton: Button) {
+        if (CustomAudioPlayer.isPlaying()) {
+            CustomAudioPlayer.stopAudio()
+            testButton.text = "▶ Test"
+            return
+        }
+
+        val hasCustom = CustomVoiceStorage.hasCustomAudio(this, slot)
+        if (hasCustom) {
+            testButton.text = "⏹ Stop"
+            val played = CustomAudioPlayer.playAudioSlot(this, slot) {
+                runOnUiThread { testButton.text = "▶ Test" }
+            }
+            if (!played) {
+                testButton.text = "▶ Test"
+                Toast.makeText(this, "Failed to play custom audio file", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            val persona = PersonaManager.getActivePersona()
+            when (slot) {
+                AudioSlot.GREETING -> speechManager.speak(persona.signatureGreetingBengali, SupportedLanguage.BENGALI)
+                AudioSlot.VOICEMAIL -> speechManager.speak(persona.formatVoicemailMessage(isBengali = true), SupportedLanguage.BENGALI)
+                AudioSlot.CALLER_ALERT -> speechManager.speak(persona.formatCallerAnnouncement("Priyanka", isBengali = true), SupportedLanguage.BENGALI)
+            }
+            Toast.makeText(this, "Playing ${persona.displayName} TTS preview", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     private fun observePersona() {
         lifecycleScope.launch {
             PersonaManager.activePersonaFlow.collectLatest { persona ->
@@ -226,6 +498,7 @@ class MainActivity : AppCompatActivity() {
                     PersonaGender.ROBOTIC -> "ROBOTIC RESONANCE"
                 }
                 tvPersonaGenderBadge.text = badgeText
+                updateCustomAudioUi()
             }
         }
     }
@@ -236,13 +509,13 @@ class MainActivity : AppCompatActivity() {
         val currentIdx = personas.indexOf(PersonaManager.getActivePersona())
 
         AlertDialog.Builder(this)
-            .setTitle("Select Stark AI Persona")
+            .setTitle("Switch AI Voice Persona")
             .setSingleChoiceItems(items, currentIdx) { dialog, which ->
                 val selected = personas[which]
                 PersonaManager.setActivePersona(selected)
                 dialog.dismiss()
-                speechManager.previewPersona(selected)
-                Toast.makeText(this, "${selected.displayName} active!", Toast.LENGTH_SHORT).show()
+                speechManager.previewPersona(selected, inBengali = true)
+                Toast.makeText(this, "${selected.displayName} voice activated!", Toast.LENGTH_SHORT).show()
             }
             .setNegativeButton("Cancel", null)
             .show()
@@ -263,31 +536,101 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun startVoiceAssistant() {
-        if (!hasCorePermissions()) {
-            Toast.makeText(this, "Please grant core permissions first.", Toast.LENGTH_SHORT).show()
-            permissionLauncher.launch(corePermissions.toTypedArray())
+    private fun toggleVoiceAssistant() {
+        if (isListening) {
+            stopVoiceAssistant()
             return
         }
 
-        tvVoiceStatus.text = getString(R.string.listening)
-        tvRecognizedSpeech.visibility = View.GONE
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            Toast.makeText(this, "Microphone permission required for voice directives.", Toast.LENGTH_SHORT).show()
+            micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            return
+        }
+
+        startVoiceAssistant()
+    }
+
+    private fun startVoiceAssistant() {
+        isListening = true
+        setListeningUi(true)
 
         speechManager.startListening(
             preferredLanguage = SupportedLanguage.BENGALI,
             onReady = {
-                tvVoiceStatus.text = "Listening… Speak now"
+                runOnUiThread {
+                    tvVoiceStatus.text = "🔴 Listening… Speak now"
+                }
             },
             onResults = { recognizedText ->
-                tvVoiceStatus.text = getString(R.string.tap_to_speak)
-                tvRecognizedSpeech.text = "You said: \"$recognizedText\""
-                tvRecognizedSpeech.visibility = View.VISIBLE
-                processVoiceCommand(recognizedText)
+                runOnUiThread {
+                    setListeningUi(false)
+                    tvVoiceStatus.text = getString(R.string.tap_to_speak)
+                    tvRecognizedSpeech.text = "You said: \"$recognizedText\""
+                    tvRecognizedSpeech.visibility = View.VISIBLE
+                    processVoiceCommand(recognizedText)
+                }
             },
             onError = { error ->
-                tvVoiceStatus.text = "Error: $error"
+                Log.w(tag, "Native SpeechRecognizer error: $error. Falling back to Google Speech Dialog...")
+                runOnUiThread {
+                    setListeningUi(false)
+                    try {
+                        googleSpeechLauncher.launch(speechManager.createRecognizerIntent(SupportedLanguage.BENGALI))
+                    } catch (e: Exception) {
+                        tvVoiceStatus.text = "Voice error: $error"
+                        Toast.makeText(this, "Voice recognition error: $error", Toast.LENGTH_SHORT).show()
+                    }
+                }
             }
         )
+    }
+
+    private fun stopVoiceAssistant() {
+        isListening = false
+        speechManager.stopListening()
+        speechManager.stopSpeaking()
+        setListeningUi(false)
+        tvVoiceStatus.text = getString(R.string.tap_to_speak)
+    }
+
+    private fun setListeningUi(listening: Boolean) {
+        isListening = listening
+        if (listening) {
+            btnMic.setBackgroundResource(R.drawable.bg_arc_reactor_listening)
+            btnStopSpeech.visibility = View.VISIBLE
+            tvVoiceStatus.text = "🔴 Initializing Arc Core..."
+            startPulseAnimation()
+        } else {
+            btnMic.setBackgroundResource(R.drawable.bg_arc_reactor)
+            btnStopSpeech.visibility = View.GONE
+            stopPulseAnimation()
+        }
+    }
+
+    private fun startPulseAnimation() {
+        stopPulseAnimation()
+        pulseAnimatorX = ObjectAnimator.ofFloat(btnMic, View.SCALE_X, 1.0f, 1.15f, 1.0f).apply {
+            duration = 1000
+            repeatCount = ValueAnimator.INFINITE
+            repeatMode = ValueAnimator.RESTART
+            start()
+        }
+        pulseAnimatorY = ObjectAnimator.ofFloat(btnMic, View.SCALE_Y, 1.0f, 1.15f, 1.0f).apply {
+            duration = 1000
+            repeatCount = ValueAnimator.INFINITE
+            repeatMode = ValueAnimator.RESTART
+            start()
+        }
+    }
+
+    private fun stopPulseAnimation() {
+        pulseAnimatorX?.cancel()
+        pulseAnimatorY?.cancel()
+        pulseAnimatorX = null
+        pulseAnimatorY = null
+        btnMic.scaleX = 1.0f
+        btnMic.scaleY = 1.0f
     }
 
     private fun processVoiceCommand(text: String) {
@@ -319,66 +662,53 @@ class MainActivity : AppCompatActivity() {
 
                 is JarvisIntent.CallTarget -> {
                     val target = intent.target.trim()
-                    var contactToCall = target
+                    val alias = JarvisApp.instance.database.aliasDao().findByTag(target)
+
+                    val contactToCall = alias?.actualContactName ?: target
                     var phoneToCall: String? = null
 
-                    if (intent.isRelationHint || CommandParser.COMMON_RELATIONS.contains(target.lowercase())) {
-                        val alias = JarvisApp.instance.database.aliasDao().findByTag(target.lowercase())
-                        if (alias != null) {
-                            contactToCall = alias.actualContactName
-                            phoneToCall = alias.phoneNumber ?: ContactHelper.getPhoneNumberForContact(this@MainActivity, contactToCall)
-                        } else {
-                            val notFoundReply = when (intent.language) {
-                                SupportedLanguage.BENGALI -> "Ami $target er number jani na. Kar sathe connect korbo?"
-                                SupportedLanguage.HINDI -> "Mujhe $target ka number nahi pata. Kise call karoon?"
-                                SupportedLanguage.ENGLISH -> "I don't know the number for $target. Who should I connect with?"
-                            }
-                            withContext(Dispatchers.Main) {
-                                speechManager.speak(notFoundReply, intent.language)
-                                Toast.makeText(this@MainActivity, notFoundReply, Toast.LENGTH_LONG).show()
-                            }
-                            return@launch
-                        }
+                    if (alias != null) {
+                        phoneToCall = alias.phoneNumber ?: ContactHelper.getPhoneNumberForContact(this@MainActivity, contactToCall)
                     } else {
+                        val byContact = JarvisApp.instance.database.aliasDao().findByContactName(contactToCall)
+                        if (byContact != null) {
+                            phoneToCall = byContact.phoneNumber ?: ContactHelper.getPhoneNumberForContact(this@MainActivity, contactToCall)
+                        }
+                    }
+
+                    if (phoneToCall.isNullOrBlank()) {
                         phoneToCall = ContactHelper.getPhoneNumberForContact(this@MainActivity, target)
                     }
 
-                    if (!phoneToCall.isNullOrBlank()) {
-                        val callingReply = when (intent.language) {
+                    if (phoneToCall != null) {
+                        val reply = when (intent.language) {
                             SupportedLanguage.BENGALI -> "$contactToCall ke call korchi..."
                             SupportedLanguage.HINDI -> "$contactToCall ko call laga raha hoon..."
-                            SupportedLanguage.ENGLISH -> "Calling $contactToCall..."
+                            SupportedLanguage.ENGLISH -> "Calling $contactToCall now..."
                         }
                         withContext(Dispatchers.Main) {
-                            speechManager.speak(callingReply, intent.language) {
+                            speechManager.speak(reply, intent.language) {
                                 ContactHelper.makePhoneCall(this@MainActivity, phoneToCall)
                             }
                         }
                     } else {
-                        val noNumberReply = when (intent.language) {
-                            SupportedLanguage.BENGALI -> "$contactToCall er kono phone number pelam na."
+                        val reply = when (intent.language) {
+                            SupportedLanguage.BENGALI -> "$contactToCall er kono phone number khuje pelam na."
                             SupportedLanguage.HINDI -> "$contactToCall ka phone number nahi mila."
                             SupportedLanguage.ENGLISH -> "Could not find a phone number for $contactToCall."
                         }
                         withContext(Dispatchers.Main) {
-                            speechManager.speak(noNumberReply, intent.language)
-                            Toast.makeText(this@MainActivity, noNumberReply, Toast.LENGTH_SHORT).show()
+                            speechManager.speak(reply, intent.language)
+                            Toast.makeText(this@MainActivity, reply, Toast.LENGTH_SHORT).show()
                         }
-                    }
-                }
-
-                is JarvisIntent.WhatsAppQuery -> {
-                    val reply = "WhatsApp notification monitoring active."
-                    withContext(Dispatchers.Main) {
-                        speechManager.speak(reply, intent.language)
                     }
                 }
 
                 is JarvisIntent.Unknown -> {
                     val reply = when (intent.language) {
-                        SupportedLanguage.BENGALI -> "Ami bujhte parlam na. Abar bolun."
+                        SupportedLanguage.BENGALI -> "Ami thik bujhte parlam na. Abar bolun."
                         SupportedLanguage.HINDI -> "Mujhe samajh nahi aaya. Kripya dobara bolein."
-                        SupportedLanguage.ENGLISH -> "I could not understand that. Please try again."
+                        SupportedLanguage.ENGLISH -> "I could not understand that directive. Please repeat."
                     }
                     withContext(Dispatchers.Main) {
                         speechManager.speak(reply, intent.language)
@@ -393,8 +723,44 @@ class MainActivity : AppCompatActivity() {
         val etTag = dialogView.findViewById<EditText>(R.id.etRelationshipTag)
         val etName = dialogView.findViewById<EditText>(R.id.etContactName)
         val etPhone = dialogView.findViewById<EditText>(R.id.etPhoneNumber)
+        val btnPickContact = dialogView.findViewById<Button>(R.id.btnPickContact)
 
-        AlertDialog.Builder(this)
+        // Relation chips
+        val chipBou = dialogView.findViewById<Button>(R.id.chipRelationBou)
+        val chipMaa = dialogView.findViewById<Button>(R.id.chipRelationMaa)
+        val chipBaba = dialogView.findViewById<Button>(R.id.chipRelationBaba)
+        val chipVai = dialogView.findViewById<Button>(R.id.chipRelationVai)
+        val chipBoss = dialogView.findViewById<Button>(R.id.chipRelationBoss)
+        val chipFriend = dialogView.findViewById<Button>(R.id.chipRelationFriend)
+
+        chipBou?.setOnClickListener { etTag.setText("bou") }
+        chipMaa?.setOnClickListener { etTag.setText("maa") }
+        chipBaba?.setOnClickListener { etTag.setText("baba") }
+        chipVai?.setOnClickListener { etTag.setText("vai") }
+        chipBoss?.setOnClickListener { etTag.setText("boss") }
+        chipFriend?.setOnClickListener { etTag.setText("friend") }
+
+        activeDialogEtName = etName
+        activeDialogEtPhone = etPhone
+
+        val openContacts = {
+            val pickIntent = Intent(Intent.ACTION_PICK, ContactsContract.CommonDataKinds.Phone.CONTENT_URI)
+            try {
+                contactPickerLauncher.launch(pickIntent)
+            } catch (e: Exception) {
+                try {
+                    val fallbackIntent = Intent(Intent.ACTION_PICK, ContactsContract.Contacts.CONTENT_URI)
+                    contactPickerLauncher.launch(fallbackIntent)
+                } catch (e2: Exception) {
+                    Toast.makeText(this, "Cannot open contacts application", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
+        btnPickContact?.setOnClickListener { openContacts() }
+        etName?.setOnClickListener { openContacts() }
+
+        val dialog = AlertDialog.Builder(this)
             .setView(dialogView)
             .setPositiveButton(R.string.btn_save) { _, _ ->
                 val tag = etTag.text.toString().trim().lowercase()
@@ -414,13 +780,22 @@ class MainActivity : AppCompatActivity() {
                                 phoneNumber = phone.ifEmpty { null }
                             )
                         )
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@MainActivity, "Trained: '$tag' = '$name'", Toast.LENGTH_SHORT).show()
+                        }
                     }
                 } else {
                     Toast.makeText(this, "Please enter both relationship and contact name", Toast.LENGTH_SHORT).show()
                 }
             }
             .setNegativeButton(R.string.btn_cancel, null)
-            .show()
+            .create()
+
+        dialog.setOnDismissListener {
+            activeDialogEtName = null
+            activeDialogEtPhone = null
+        }
+        dialog.show()
     }
 
     private fun hasCorePermissions(): Boolean {

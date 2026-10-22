@@ -189,8 +189,11 @@ class JarvisSpeechManager private constructor(private val context: Context) :
 
     fun previewPersona(persona: StarkPersona, inBengali: Boolean = false) {
         applyPersona(persona)
-        // Check if user provided custom audio file for this persona (e.g. jarvis_greeting.mp3)
-        val customAudioPlayed = com.jarvis.assistant.audio.CustomAudioPlayer.playCustomAudio(
+        // Check if user provided custom audio file for greeting slot or persona greeting
+        val customAudioPlayed = com.jarvis.assistant.audio.CustomAudioPlayer.playAudioSlot(
+            context,
+            com.jarvis.assistant.audio.AudioSlot.GREETING
+        ) || com.jarvis.assistant.audio.CustomAudioPlayer.playCustomAudio(
             context,
             "${persona.id}_greeting"
         )
@@ -207,6 +210,21 @@ class JarvisSpeechManager private constructor(private val context: Context) :
         completionCallbacks.clear()
     }
 
+    fun createRecognizerIntent(preferredLanguage: SupportedLanguage = SupportedLanguage.BENGALI): Intent {
+        val langTag = when (preferredLanguage) {
+            SupportedLanguage.BENGALI -> "bn-IN"
+            SupportedLanguage.HINDI -> "hi-IN"
+            SupportedLanguage.ENGLISH -> currentPersona.preferredLocale.toLanguageTag()
+        }
+        return Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, langTag)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, langTag)
+            putExtra(RecognizerIntent.EXTRA_PROMPT, "Jarvis is listening... Speak in Bengali, Hindi or English")
+        }
+    }
+
     // --- Native Speech Recognition (STT) ---
     fun startListening(
         preferredLanguage: SupportedLanguage = SupportedLanguage.BENGALI,
@@ -221,61 +239,54 @@ class JarvisSpeechManager private constructor(private val context: Context) :
 
         stopListening()
 
-        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context).apply {
-            setRecognitionListener(object : RecognitionListener {
-                override fun onReadyForSpeech(params: Bundle?) {
-                    onReady()
-                }
-
-                override fun onBeginningOfSpeech() {}
-                override fun onRmsChanged(rmsdB: Float) {}
-                override fun onBufferReceived(buffer: ByteArray?) {}
-                override fun onEndOfSpeech() {}
-
-                override fun onError(error: Int) {
-                    val message = when (error) {
-                        SpeechRecognizer.ERROR_AUDIO -> "Audio recording error"
-                        SpeechRecognizer.ERROR_CLIENT -> "Client side error"
-                        SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Insufficient permissions"
-                        SpeechRecognizer.ERROR_NETWORK -> "Network error (Ensure offline language pack installed)"
-                        SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "Network timeout"
-                        SpeechRecognizer.ERROR_NO_MATCH -> "No speech match recognized"
-                        SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "Recognizer busy"
-                        SpeechRecognizer.ERROR_SERVER -> "Recognition server error"
-                        SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "No speech detected"
-                        else -> "Recognition error: $error"
+        try {
+            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context).apply {
+                setRecognitionListener(object : RecognitionListener {
+                    override fun onReadyForSpeech(params: Bundle?) {
+                        onReady()
                     }
-                    onError(message)
-                }
 
-                override fun onResults(results: Bundle?) {
-                    val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                    if (!matches.isNullOrEmpty()) {
-                        onResults(matches[0])
-                    } else {
-                        onError("No match found")
+                    override fun onBeginningOfSpeech() {}
+                    override fun onRmsChanged(rmsdB: Float) {}
+                    override fun onBufferReceived(buffer: ByteArray?) {}
+                    override fun onEndOfSpeech() {}
+
+                    override fun onError(error: Int) {
+                        val message = when (error) {
+                            SpeechRecognizer.ERROR_AUDIO -> "Audio recording error"
+                            SpeechRecognizer.ERROR_CLIENT -> "Client side error"
+                            SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Insufficient permissions"
+                            SpeechRecognizer.ERROR_NETWORK -> "Network error"
+                            SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "Network timeout"
+                            SpeechRecognizer.ERROR_NO_MATCH -> "No speech match recognized"
+                            SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "Recognizer busy"
+                            SpeechRecognizer.ERROR_SERVER -> "Recognition server error"
+                            SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "No speech detected"
+                            else -> "Recognition error: $error"
+                        }
+                        onError(message)
                     }
-                }
 
-                override fun onPartialResults(partialResults: Bundle?) {}
-                override fun onEvent(eventType: Int, params: Bundle?) {}
-            })
-        }
+                    override fun onResults(results: Bundle?) {
+                        val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                        if (!matches.isNullOrEmpty()) {
+                            onResults(matches[0])
+                        } else {
+                            onError("No match found")
+                        }
+                    }
 
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
-            putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
-            val langTag = when (preferredLanguage) {
-                SupportedLanguage.BENGALI -> "bn-IN"
-                SupportedLanguage.HINDI -> "hi-IN"
-                SupportedLanguage.ENGLISH -> currentPersona.preferredLocale.toLanguageTag()
+                    override fun onPartialResults(partialResults: Bundle?) {}
+                    override fun onEvent(eventType: Int, params: Bundle?) {}
+                })
             }
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, langTag)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, langTag)
-        }
 
-        speechRecognizer?.startListening(intent)
+            val intent = createRecognizerIntent(preferredLanguage)
+            speechRecognizer?.startListening(intent)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error starting SpeechRecognizer", e)
+            onError(e.localizedMessage ?: "Failed to start speech recognition")
+        }
     }
 
     fun stopListening() {

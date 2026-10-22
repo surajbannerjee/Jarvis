@@ -1,25 +1,55 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="24dp"
+    android:padding="22dp"
     android:background="@drawable/bg_card">
 
-    <TextView
-        android:layout_width="wrap_content"
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/dialog_add_title"
-        android:textColor="@color/jarvis_cyan_primary"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="16dp" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="14dp">
 
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="🧠 Train Relationship Memory"
+            android:textColor="@color/jarvis_cyan_primary"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="STARK CORE"
+            android:textColor="@color/text_secondary"
+            android:textSize="10sp"
+            android:letterSpacing="0.08" />
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Teach Jarvis who this contact is (e.g. your wife 'bou', 'maa', or 'boss') so voice commands like 'Amar bou ke call koro' work instantly."
+        android:textColor="@color/text_secondary"
+        android:textSize="12sp"
+        android:layout_marginBottom="14dp" />
+
+    <!-- Relationship Tag Input -->
     <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilRelationshipTag"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="@string/hint_relationship"
-        android:layout_marginBottom="12dp">
+        app:boxStrokeColor="@color/jarvis_cyan_primary"
+        app:hintTextColor="@color/jarvis_cyan_primary"
+        android:layout_marginBottom="8dp">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etRelationshipTag"
@@ -29,10 +59,95 @@
             android:textColor="@color/text_primary" />
     </com.google.android.material.textfield.TextInputLayout>
 
+    <!-- Quick Relation Tag Chips -->
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:scrollbars="none"
+        android:layout_marginBottom="14dp">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/chipRelationBou"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="wrap_content"
+                android:layout_height="32dp"
+                android:text="bou"
+                android:textSize="11sp"
+                android:layout_marginEnd="6dp" />
+
+            <Button
+                android:id="@+id/chipRelationMaa"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="wrap_content"
+                android:layout_height="32dp"
+                android:text="maa"
+                android:textSize="11sp"
+                android:layout_marginEnd="6dp" />
+
+            <Button
+                android:id="@+id/chipRelationBaba"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="wrap_content"
+                android:layout_height="32dp"
+                android:text="baba"
+                android:textSize="11sp"
+                android:layout_marginEnd="6dp" />
+
+            <Button
+                android:id="@+id/chipRelationVai"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="wrap_content"
+                android:layout_height="32dp"
+                android:text="vai"
+                android:textSize="11sp"
+                android:layout_marginEnd="6dp" />
+
+            <Button
+                android:id="@+id/chipRelationBoss"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="wrap_content"
+                android:layout_height="32dp"
+                android:text="boss"
+                android:textSize="11sp"
+                android:layout_marginEnd="6dp" />
+
+            <Button
+                android:id="@+id/chipRelationFriend"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="wrap_content"
+                android:layout_height="32dp"
+                android:text="friend"
+                android:textSize="11sp" />
+        </LinearLayout>
+    </HorizontalScrollView>
+
+    <!-- Choose Contact from Phone Button -->
+    <Button
+        android:id="@+id/btnPickContact"
+        style="@style/Widget.Material3.Button.TonalButton"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="📱 Choose Contact from Phone"
+        android:textColor="@color/jarvis_cyan_primary"
+        android:textStyle="bold"
+        android:textSize="13sp"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Contact Name Input (Clickable to pick from contacts) -->
     <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilContactName"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="@string/hint_contact_name"
+        app:helperText="Tap here or button above to pick saved contact from phone"
+        app:helperTextColor="@color/text_secondary"
+        app:boxStrokeColor="@color/jarvis_cyan_primary"
+        app:hintTextColor="@color/jarvis_cyan_primary"
         android:layout_marginBottom="12dp">
 
         <com.google.android.material.textfield.TextInputEditText
@@ -43,11 +158,15 @@
             android:textColor="@color/text_primary" />
     </com.google.android.material.textfield.TextInputLayout>
 
+    <!-- Phone Number Input (Auto-filled on contact selection) -->
     <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilPhoneNumber"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="@string/hint_phone_optional"
-        android:layout_marginBottom="20dp">
+        app:boxStrokeColor="@color/jarvis_cyan_primary"
+        app:hintTextColor="@color/jarvis_cyan_primary"
+        android:layout_marginBottom="16dp">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etPhoneNumber"

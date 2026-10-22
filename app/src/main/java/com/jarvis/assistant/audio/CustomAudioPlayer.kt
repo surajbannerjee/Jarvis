@@ -14,8 +14,10 @@ object CustomAudioPlayer {
     private var mediaPlayer: MediaPlayer? = null
 
     /**
-     * Attempts to play custom audio clip from app's raw resources, assets,
-     * or local /sdcard/Jarvis/voices/ directory.
+     * Attempts to play custom audio clip from:
+     * 1. In-app user-uploaded slots (CustomVoiceStorage)
+     * 2. App's res/raw/ resources
+     * 3. Device storage directories (/sdcard/Jarvis/voices/ or app internal files)
      * Returns true if audio file was found and played, false otherwise.
      */
     fun playCustomAudio(
@@ -26,9 +28,27 @@ object CustomAudioPlayer {
     ): Boolean {
         stopAudio()
 
-        // 1. Check res/raw for resource (e.g. R.raw.jarvis_greeting)
+        val lowerName = audioFileNameWithoutExtension.lowercase()
+
+        // 1. Check if it matches an in-app uploaded AudioSlot
+        val matchedSlot = when {
+            lowerName.contains("greeting") -> AudioSlot.GREETING
+            lowerName.contains("voicemail") -> AudioSlot.VOICEMAIL
+            lowerName.contains("caller") -> AudioSlot.CALLER_ALERT
+            else -> null
+        }
+
+        if (matchedSlot != null) {
+            val slotFile = CustomVoiceStorage.getAudioFile(context, matchedSlot)
+            if (slotFile != null) {
+                Log.d(TAG, "Playing user-uploaded audio for slot ${matchedSlot.name}: ${slotFile.absolutePath}")
+                return playAudioFile(context, slotFile, streamType, onComplete)
+            }
+        }
+
+        // 2. Check res/raw for resource (e.g. R.raw.jarvis_greeting)
         val resId = context.resources.getIdentifier(
-            audioFileNameWithoutExtension.lowercase(),
+            lowerName,
             "raw",
             context.packageName
         )
@@ -47,7 +67,7 @@ object CustomAudioPlayer {
                     }
                     start()
                 }
-                Log.d(TAG, "Playing custom audio from res/raw: $audioFileNameWithoutExtension")
+                Log.d(TAG, "Playing custom audio from res/raw: $lowerName")
                 true
             } catch (e: Exception) {
                 Log.e(TAG, "Error playing raw audio resource", e)
@@ -55,8 +75,9 @@ object CustomAudioPlayer {
             }
         }
 
-        // 2. Check external/internal voices directory (e.g. /Android/data/.../files/voices/ or /sdcard/Jarvis/voices/)
+        // 3. Check external/internal voices directory (e.g. /Android/data/.../files/voices/ or /sdcard/Jarvis/voices/)
         val voiceDirs = listOf(
+            CustomVoiceStorage.getVoicesDir(context),
             File(context.getExternalFilesDir(null), "voices"),
             File("/sdcard/Jarvis/voices")
         )
@@ -66,32 +87,64 @@ object CustomAudioPlayer {
             for (ext in audioExtensions) {
                 val file = File(dir, audioFileNameWithoutExtension + ext)
                 if (file.exists() && file.canRead()) {
-                    return try {
-                        mediaPlayer = MediaPlayer().apply {
-                            setAudioAttributes(
-                                AudioAttributes.Builder()
-                                    .setLegacyStreamType(streamType)
-                                    .build()
-                            )
-                            setDataSource(context, Uri.fromFile(file))
-                            prepare()
-                            setOnCompletionListener {
-                                stopAudio()
-                                onComplete?.invoke()
-                            }
-                            start()
-                        }
-                        Log.d(TAG, "Playing custom audio file from storage: ${file.absolutePath}")
-                        true
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error playing audio file from storage", e)
-                        false
-                    }
+                    Log.d(TAG, "Playing custom audio file from storage: ${file.absolutePath}")
+                    return playAudioFile(context, file, streamType, onComplete)
                 }
             }
         }
 
         return false
+    }
+
+    fun playAudioFile(
+        context: Context,
+        file: File,
+        streamType: Int = AudioManager.STREAM_MUSIC,
+        onComplete: (() -> Unit)? = null
+    ): Boolean {
+        stopAudio()
+        return try {
+            mediaPlayer = MediaPlayer().apply {
+                setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setLegacyStreamType(streamType)
+                        .build()
+                )
+                setDataSource(context, Uri.fromFile(file))
+                prepare()
+                setOnCompletionListener {
+                    stopAudio()
+                    onComplete?.invoke()
+                }
+                start()
+            }
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Error playing audio file: ${file.absolutePath}", e)
+            false
+        }
+    }
+
+    fun playAudioSlot(
+        context: Context,
+        slot: AudioSlot,
+        streamType: Int = AudioManager.STREAM_MUSIC,
+        onComplete: (() -> Unit)? = null
+    ): Boolean {
+        val slotFile = CustomVoiceStorage.getAudioFile(context, slot)
+        return if (slotFile != null) {
+            playAudioFile(context, slotFile, streamType, onComplete)
+        } else {
+            false
+        }
+    }
+
+    fun isPlaying(): Boolean {
+        return try {
+            mediaPlayer?.isPlaying == true
+        } catch (e: Exception) {
+            false
+        }
     }
 
     fun stopAudio() {

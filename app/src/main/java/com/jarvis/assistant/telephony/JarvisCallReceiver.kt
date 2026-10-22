@@ -69,12 +69,19 @@ class JarvisCallReceiver : BroadcastReceiver() {
 
             // 4. Announce Caller
             Log.d(TAG, "Announcing caller via ${persona.displayName}: $announcementText")
-            val speechManager = JarvisApp.instance.speechManager
-            speechManager.speak(
-                text = announcementText,
-                language = speechLang,
+            val customAlertPlayed = com.jarvis.assistant.audio.CustomAudioPlayer.playAudioSlot(
+                context = context,
+                slot = com.jarvis.assistant.audio.AudioSlot.CALLER_ALERT,
                 streamType = AudioManager.STREAM_RING
             )
+            if (!customAlertPlayed) {
+                val speechManager = JarvisApp.instance.speechManager
+                speechManager.speak(
+                    text = announcementText,
+                    language = speechLang,
+                    streamType = AudioManager.STREAM_RING
+                )
+            }
 
             // 5. Start Unattended Call Countdown
             val thresholdSeconds = JarvisApp.instance.getRingThresholdSeconds()

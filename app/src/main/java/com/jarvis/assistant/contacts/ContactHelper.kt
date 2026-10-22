@@ -55,6 +55,69 @@ object ContactHelper {
     }
 
     /**
+     * Resolves display name and phone number from picked contact URI
+     */
+    fun getContactDetailsFromUri(context: Context, contactUri: Uri): Pair<String?, String?> {
+        var displayName: String? = null
+        var phoneNumber: String? = null
+
+        try {
+            // First attempt: try querying as CommonDataKinds.Phone
+            val phoneProjection = arrayOf(
+                ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+                ContactsContract.CommonDataKinds.Phone.NUMBER
+            )
+            context.contentResolver.query(contactUri, phoneProjection, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val nameIdx = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+                    val numIdx = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+                    if (nameIdx != -1) displayName = cursor.getString(nameIdx)
+                    if (numIdx != -1) phoneNumber = cursor.getString(numIdx)
+                }
+            }
+
+            // Second attempt: if displayName is still null, query ContactsContract.Contacts
+            if (displayName == null) {
+                val contactProjection = arrayOf(
+                    ContactsContract.Contacts._ID,
+                    ContactsContract.Contacts.DISPLAY_NAME,
+                    ContactsContract.Contacts.HAS_PHONE_NUMBER
+                )
+                context.contentResolver.query(contactUri, contactProjection, null, null, null)?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val idIdx = cursor.getColumnIndex(ContactsContract.Contacts._ID)
+                        val nameIdx = cursor.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME)
+                        val hasPhoneIdx = cursor.getColumnIndex(ContactsContract.Contacts.HAS_PHONE_NUMBER)
+
+                        if (nameIdx != -1) displayName = cursor.getString(nameIdx)
+                        val contactId = if (idIdx != -1) cursor.getString(idIdx) else null
+                        val hasPhone = if (hasPhoneIdx != -1) cursor.getInt(hasPhoneIdx) > 0 else false
+
+                        if (hasPhone && contactId != null) {
+                            context.contentResolver.query(
+                                ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                                arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER),
+                                "${ContactsContract.CommonDataKinds.Phone.CONTACT_ID} = ?",
+                                arrayOf(contactId),
+                                "${ContactsContract.CommonDataKinds.Phone.IS_PRIMARY} DESC"
+                            )?.use { phoneCursor ->
+                                if (phoneCursor.moveToFirst()) {
+                                    val numIdx = phoneCursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+                                    if (numIdx != -1) phoneNumber = phoneCursor.getString(numIdx)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error resolving contact details from URI: $contactUri", e)
+        }
+
+        return Pair(displayName, phoneNumber)
+    }
+
+    /**
      * Queries Android Contacts to find phone number for a given name
      */
     fun getPhoneNumberForContact(context: Context, contactName: String): String? {
