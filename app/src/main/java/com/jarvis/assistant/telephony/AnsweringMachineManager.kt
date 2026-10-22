@@ -69,8 +69,10 @@ object AnsweringMachineManager {
 
                 val finishVoicemail: () -> Unit = {
                     scope.launch {
-                        delay(2000)
-                        Log.d(TAG, "Terminating call post voicemail...")
+                        // Allow caller 12 seconds to state their urgent message while Friday records
+                        Log.d(TAG, "Voicemail spoken. Waiting 12 seconds for caller to state their message...")
+                        delay(12000)
+                        Log.d(TAG, "Terminating call post voicemail message window...")
                         CallRecordingManager.stopRecording(context)
                         hangUpCall(context)
                         audioManager.isSpeakerphoneOn = originalSpeakerphone
@@ -79,28 +81,19 @@ object AnsweringMachineManager {
                     }
                 }
 
-                // Check for custom audio or Friday signature speech.wav
-                val customVoicemailPlayed = if (persona == com.jarvis.assistant.persona.StarkPersona.FRIDAY) {
-                    com.jarvis.assistant.audio.CustomAudioPlayer.playCustomAudio(
-                        context = context,
-                        audioFileNameWithoutExtension = "friday_greeting",
-                        streamType = AudioManager.STREAM_VOICE_CALL
-                    ) { finishVoicemail() } || com.jarvis.assistant.audio.CustomAudioPlayer.playAudioSlot(
-                        context = context,
-                        slot = com.jarvis.assistant.audio.AudioSlot.VOICEMAIL,
-                        streamType = AudioManager.STREAM_VOICE_CALL
-                    ) { finishVoicemail() }
-                } else {
+                // Check if user uploaded a custom voicemail audio file
+                val hasUserCustomVoicemail = com.jarvis.assistant.audio.CustomVoiceStorage.hasCustomAudio(
+                    context,
+                    com.jarvis.assistant.audio.AudioSlot.VOICEMAIL
+                )
+
+                val customVoicemailPlayed = if (hasUserCustomVoicemail) {
                     com.jarvis.assistant.audio.CustomAudioPlayer.playAudioSlot(
                         context = context,
                         slot = com.jarvis.assistant.audio.AudioSlot.VOICEMAIL,
                         streamType = AudioManager.STREAM_VOICE_CALL
-                    ) { finishVoicemail() } || com.jarvis.assistant.audio.CustomAudioPlayer.playCustomAudio(
-                        context = context,
-                        audioFileNameWithoutExtension = "${persona.id}_voicemail",
-                        streamType = AudioManager.STREAM_VOICE_CALL
                     ) { finishVoicemail() }
-                }
+                } else false
 
                 if (!customVoicemailPlayed) {
                     // Generate smart AI Answering Machine message via JarvisAiBrain

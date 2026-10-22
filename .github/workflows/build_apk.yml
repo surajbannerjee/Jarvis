@@ -72,10 +72,10 @@ jobs:
         if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.5.0
-          name: Jarvis Assistant v1.5.0 (Dedicated F.R.I.D.A.Y., "Hi Friday" Wake Word & Call Recording)
+          tag_name: v1.5.1
+          name: Jarvis Assistant v1.5.1 (Smart Urgent Voicemail Inquiries & 12s Recording Window)
           body: |
-            ### 🚀 Jarvis Assistant v1.5.0
+            ### 🚀 Jarvis Assistant v1.5.1
             Download and install the APK directly on your phone!
 
             #### 🌟 What's New in v1.5.0:

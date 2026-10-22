@@ -175,8 +175,8 @@ enum class StarkPersona(
                 else "Hello, this is Jarvis, Mr. Stark's assistant. Boss is currently indisposed. Please forward your message via WhatsApp. Thank you."
 
             FRIDAY ->
-                if (isBengali) "Hello! Ami Friday bolchi. Boss akhon ektu busy achen phone dhorar jonno. Kono urgent kotha thakle WhatsApp-e message kore din!"
-                else "Hello! This is Friday. Boss is in the middle of something urgent right now. Send a message on WhatsApp and he'll get back to you!"
+                if (isBengali) "হ্যালো! আমি ফ্রাইডে বলছি। বস এখন একটু ব্যস্ত আছেন। আপনার কি কোনো আর্জেন্ট বা দরকারি কথা আছে? তাহলে আমাকে বলে রাখুন, বস ফাঁকা হলেই আমি উনাকে সাথে সাথে জানিয়ে দেব। ধন্যবাদ!"
+                else "Hello! This is Friday. Boss is currently busy and cannot take your call. Do you have any urgent message? Please tell me now, and I will inform Boss as soon as he is free. Thank you!"
 
             KAREN ->
                 if (isBengali) "Namaskar, ami Karen. Boss akhon phone dhorche parchen na. Kripoya WhatsApp-e message pathiye rakhun."
