@@ -375,7 +375,6 @@ class MainActivity : AppCompatActivity() {
 
         btnPlayFridaySpeech.setOnClickListener {
             PersonaManager.setActivePersona(StarkPersona.FRIDAY)
-            updatePersonaUi(StarkPersona.FRIDAY)
             CustomAudioPlayer.playCustomAudio(this, "friday_greeting")
             tvVoiceStatus.text = "Playing F.R.I.D.A.Y. Built-in Voice..."
             Toast.makeText(this, "Playing F.R.I.D.A.Y. Speech Audio...", Toast.LENGTH_SHORT).show()
