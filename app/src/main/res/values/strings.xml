@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Jarvis</string>
+    <string name="app_subtitle">Autonomous Offline Relationship Assistant</string>
+    <string name="notification_service_label">Jarvis WhatsApp Notification Reader</string>
+    <string name="accessibility_service_label">Jarvis Autonomous Call Assistant</string>
+    <string name="accessibility_service_desc">Jarvis uses accessibility features to autonomously answer unattended calls and navigate call screens on your behalf.</string>
+
+    <!-- Permission card strings -->
+    <string name="permissions_status_header">System Permissions &amp; Services</string>
+    <string name="perm_audio_contacts_phone">Core Phone &amp; Audio Permissions</string>
+    <string name="perm_notification_listener">WhatsApp Notification Access</string>
+    <string name="perm_accessibility">Call Answering Accessibility</string>
+    <string name="perm_battery">Battery Optimization Bypass</string>
+    <string name="grant_permission">Grant</string>
+    <string name="enabled">Active</string>
+    <string name="enable">Enable</string>
+
+    <!-- Alias management -->
+    <string name="aliases_header">Trained Relationships (Memory)</string>
+    <string name="no_aliases_yet">No relationships trained yet. Tap + or say \'Jarvis, amar bou er nam Priya\'.</string>
+    <string name="add_alias_btn">+ Add Relationship</string>
+    <string name="dialog_add_title">Train New Relationship</string>
+    <string name="hint_relationship">Relation (e.g. bou, maa, boss, wife)</string>
+    <string name="hint_contact_name">Saved Contact Name (e.g. Priya)</string>
+    <string name="hint_phone_optional">Phone Number (Optional)</string>
+    <string name="btn_save">Save to Memory</string>
+    <string name="btn_cancel">Cancel</string>
+
+    <!-- Voice Control -->
+    <string name="tap_to_speak">Tap to Speak</string>
+    <string name="listening">Listening… Speak in Bengali, Hindi, or English</string>
+    <string name="voice_command_hint">Try saying:\n• "Amar bou ke call koro"\n• "Jarvis, amar bou er nam Priya"\n• "Mummy ko call lagao"\n• "Call my boss"</string>
+
+    <!-- Answering Machine Settings -->
+    <string name="settings_header">Answering Machine Config</string>
+    <string name="unattended_threshold_label">Unattended Ring Threshold (Seconds)</string>
+    <string name="answering_machine_voice_label">Voice Response Language</string>
+</resources>
