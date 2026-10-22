@@ -145,7 +145,7 @@
         android:layout_height="wrap_content"
         android:hint="@string/hint_contact_name"
         app:helperText="Tap here or button above to pick saved contact from phone"
-        app:helperTextColor="@color/text_secondary"
+        app:helperTextTextColor="@color/text_secondary"
         app:boxStrokeColor="@color/jarvis_cyan_primary"
         app:hintTextColor="@color/jarvis_cyan_primary"
         android:layout_marginBottom="12dp">
