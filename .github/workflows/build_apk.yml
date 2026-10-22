@@ -72,10 +72,10 @@ jobs:
         if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.5.3
-          name: Jarvis Assistant v1.5.3 (Exclusive Friday Voice, Call Fixes & Owner Voice Lock)
+          tag_name: v1.5.4
+          name: Jarvis Assistant v1.5.4 (Exclusive Friday Voice, Call Fixes & Owner Voice Lock)
           body: |
-            ### 🚀 Jarvis Assistant v1.5.3
+            ### 🚀 Jarvis Assistant v1.5.4
             Download and install the APK directly on your phone!
 
             #### 🌟 What's New in v1.5.0:

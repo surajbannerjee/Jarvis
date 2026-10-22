@@ -9,6 +9,7 @@
     <color name="jarvis_accent_blue">#00B0FF</color>
     <color name="jarvis_success">#00E676</color>
     <color name="jarvis_warning">#FFD600</color>
+    <color name="jarvis_gold">#FFD700</color>
     <color name="jarvis_error">#FF5252</color>
     <color name="text_primary">#F0F6FC</color>
     <color name="text_secondary">#8B949E</color>
