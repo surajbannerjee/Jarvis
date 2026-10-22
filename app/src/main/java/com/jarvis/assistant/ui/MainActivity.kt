@@ -774,7 +774,21 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
-                is JarvisIntent.Unknown, else -> {
+                is JarvisIntent.Unknown -> {
+                    val persona = PersonaManager.getActivePersona()
+                    withContext(Dispatchers.Main) {
+                        tvAiUserPrompt.text = "You: '$text'"
+                        tvAiAssistantReply.text = "${persona.displayName}: 'Thinking...'"
+                    }
+                    val aiReply = JarvisAiBrain.chat(this@MainActivity, text, intent.language)
+                    withContext(Dispatchers.Main) {
+                        tvAiAssistantReply.text = "${persona.displayName}: '$aiReply'"
+                        tvRecognizedSpeech.text = "AI: $aiReply"
+                        speechManager.speak(aiReply, intent.language)
+                    }
+                }
+
+                else -> {
                     val persona = PersonaManager.getActivePersona()
                     withContext(Dispatchers.Main) {
                         tvAiUserPrompt.text = "You: '$text'"
