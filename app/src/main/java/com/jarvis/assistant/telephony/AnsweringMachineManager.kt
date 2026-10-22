@@ -10,6 +10,7 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import com.jarvis.assistant.JarvisApp
 import com.jarvis.assistant.nlp.SupportedLanguage
+import com.jarvis.assistant.persona.PersonaManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -25,7 +26,7 @@ object AnsweringMachineManager {
 
     /**
      * Executes autonomous call pickup, routes audio through speakerphone,
-     * speaks the voicemail message, and terminates the call.
+     * speaks the voicemail message using the active Stark AI persona, and terminates the call.
      */
     fun executeAutonomousPickup(context: Context, callerRelationOrName: String?) {
         if (isCallInProgress) {
@@ -58,11 +59,9 @@ object AnsweringMachineManager {
                 audioManager.isSpeakerphoneOn = true
                 Log.d(TAG, "Audio routed to Speakerphone for voicemail playback.")
 
-                // 4. Voice message to caller (Default Multilingual Bengali + English)
-                val voiceMessage =
-                    "Namaskar, ami boss er assistant Jarvis bolchi. " +
-                    "Boss akhon bayre achen ba phone dhorche paren ni. " +
-                    "Kono dorkari kotha thakle WhatsApp-e message pathan. Dhonnobad."
+                // 4. Voice message to caller (Tailored to active Stark Persona)
+                val persona = PersonaManager.getActivePersona()
+                val voiceMessage = persona.formatVoicemailMessage(isBengali = true)
 
                 val speechManager = JarvisApp.instance.speechManager
 

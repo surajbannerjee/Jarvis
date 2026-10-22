@@ -42,14 +42,29 @@ jobs:
         if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.0
-          name: Jarvis Assistant v1.0.0 (Direct Phone APK)
+          tag_name: v1.1.0
+          name: Jarvis Assistant v1.1.0 (Stark AI Persona Edition)
           body: |
-            ### 🚀 Jarvis Offline Android Assistant
-            Download and install the APK directly on your phone:
-            - **100% Offline Speech Recognition & Multilingual TTS**
-            - **Room Memory Database for Relationship Mapping**
-            - **Autonomous Answering Machine & WhatsApp Reader**
+            ### 🚀 Jarvis Assistant v1.1.0 - Stark AI Persona Edition
+            Download and install the APK directly on your phone!
+            
+            #### 🌟 New: 10 Iconic Stark AI Persona Voices:
+            - **J.A.R.V.I.S.** (Calm British butler AI)
+            - **F.R.I.D.A.Y.** (Tactical & energetic Irish female AI)
+            - **K.A.R.E.N.** (Gentle Spider-Man suit lady AI)
+            - **E.D.I.T.H.** (High-tech orbital satellite defense AI)
+            - **U.L.T.R.O.N.** (Deep, menacing robotic resonance)
+            - **V.E.R.O.N.I.C.A.** (Hulkbuster satellite deployment AI)
+            - **J.O.C.A.S.T.A.** (Ethicist & logical synthetic AI)
+            - **H.O.M.E.R.** (Vintage armory & estate security AI)
+            - **P.L.A.T.O.** (Fast background protocol supervisor)
+            - **D.U.M.-E** (Playful workshop robotic arm)
+            
+            #### 🛡️ Core Capabilities:
+            - **100% Offline Speech Recognition & Dynamic Multilingual TTS**
+            - **Room Memory Database for Relationship Mapping (bou, maa, boss, etc.)**
+            - **Caller Announcement with Relationship Tags**
+            - **Autonomous Answering Machine & WhatsApp Notification Reader**
           files: app/build/outputs/apk/debug/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

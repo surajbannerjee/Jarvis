@@ -12,8 +12,12 @@ import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import android.speech.tts.Voice
 import android.util.Log
 import com.jarvis.assistant.nlp.SupportedLanguage
+import com.jarvis.assistant.persona.PersonaGender
+import com.jarvis.assistant.persona.PersonaManager
+import com.jarvis.assistant.persona.StarkPersona
 import java.util.Locale
 import java.util.UUID
 
@@ -24,6 +28,9 @@ class JarvisSpeechManager private constructor(private val context: Context) :
     private var tts: TextToSpeech? = null
     private var isTtsInitialized = false
     private var speechRecognizer: SpeechRecognizer? = null
+
+    var currentPersona: StarkPersona = StarkPersona.JARVIS
+        private set
 
     // Callbacks for Utterance completion
     private val completionCallbacks = mutableMapOf<String, () -> Unit>()
@@ -55,10 +62,67 @@ class JarvisSpeechManager private constructor(private val context: Context) :
                     }
                 }
             })
-            // Default to English initially
-            setTtsLanguage(SupportedLanguage.ENGLISH)
+
+            // Load saved persona
+            val savedPersona = PersonaManager.getActivePersona()
+            applyPersona(savedPersona)
         } else {
             Log.e(TAG, "Failed to initialize Android TextToSpeech engine.")
+        }
+    }
+
+    fun applyPersona(persona: StarkPersona) {
+        currentPersona = persona
+        if (!isTtsInitialized || tts == null) return
+
+        try {
+            tts?.setPitch(persona.pitch)
+            tts?.setSpeechRate(persona.speechRate)
+
+            // Try selecting gender-matched voice if device has multiple voices
+            selectVoiceForPersona(persona, SupportedLanguage.ENGLISH)
+            Log.d(TAG, "Applied persona: ${persona.displayName} (Pitch: ${persona.pitch}, Rate: ${persona.speechRate})")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error applying persona voice settings", e)
+        }
+    }
+
+    private fun selectVoiceForPersona(persona: StarkPersona, language: SupportedLanguage) {
+        if (!isTtsInitialized || tts == null) return
+
+        try {
+            val voices = tts?.voices ?: return
+            val targetLocale = when (language) {
+                SupportedLanguage.BENGALI -> Locale("bn", "IN")
+                SupportedLanguage.HINDI -> Locale("hi", "IN")
+                SupportedLanguage.ENGLISH -> persona.preferredLocale
+            }
+
+            // Find matching voice by locale and gender keyword
+            val matchingVoices = voices.filter { it.locale.language == targetLocale.language }
+            val preferredVoice = when (persona.gender) {
+                PersonaGender.FEMALE -> {
+                    matchingVoices.firstOrNull {
+                        it.name.contains("female", ignoreCase = true) ||
+                        it.name.contains("woman", ignoreCase = true) ||
+                        it.name.contains("f0", ignoreCase = true)
+                    } ?: matchingVoices.firstOrNull()
+                }
+                PersonaGender.MALE, PersonaGender.ROBOTIC -> {
+                    matchingVoices.firstOrNull {
+                        it.name.contains("male", ignoreCase = true) ||
+                        it.name.contains("man", ignoreCase = true) ||
+                        it.name.contains("m0", ignoreCase = true)
+                    } ?: matchingVoices.firstOrNull()
+                }
+            }
+
+            if (preferredVoice != null) {
+                tts?.voice = preferredVoice
+                Log.d(TAG, "Selected voice for ${persona.displayName}: ${preferredVoice.name}")
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Voice selection fallback to default locale", e)
         }
     }
 
@@ -77,15 +141,20 @@ class JarvisSpeechManager private constructor(private val context: Context) :
                 }
             }
             SupportedLanguage.HINDI -> Locale("hi", "IN")
-            SupportedLanguage.ENGLISH -> Locale.US
+            SupportedLanguage.ENGLISH -> currentPersona.preferredLocale
         }
 
         try {
             val result = tts?.setLanguage(targetLocale)
             if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
-                Log.w(TAG, "Locale $targetLocale not fully supported, falling back to default.")
+                Log.w(TAG, "Locale $targetLocale not fully supported, falling back to US.")
                 tts?.setLanguage(Locale.US)
             }
+
+            // Re-apply pitch & speechRate and voice
+            tts?.setPitch(currentPersona.pitch)
+            tts?.setSpeechRate(currentPersona.speechRate)
+            selectVoiceForPersona(currentPersona, lang)
         } catch (e: Exception) {
             Log.e(TAG, "Error switching TTS language", e)
         }
@@ -116,6 +185,13 @@ class JarvisSpeechManager private constructor(private val context: Context) :
         }
 
         tts?.speak(text, TextToSpeech.QUEUE_FLUSH, params, utteranceId)
+    }
+
+    fun previewPersona(persona: StarkPersona, inBengali: Boolean = false) {
+        applyPersona(persona)
+        val text = if (inBengali) persona.signatureGreetingBengali else persona.signatureGreeting
+        val lang = if (inBengali) SupportedLanguage.BENGALI else SupportedLanguage.ENGLISH
+        speak(text, lang)
     }
 
     fun stopSpeaking() {
@@ -181,13 +257,11 @@ class JarvisSpeechManager private constructor(private val context: Context) :
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
-            // Request offline preferential recognition
             putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
-            // Language hint
             val langTag = when (preferredLanguage) {
                 SupportedLanguage.BENGALI -> "bn-IN"
                 SupportedLanguage.HINDI -> "hi-IN"
-                SupportedLanguage.ENGLISH -> "en-US"
+                SupportedLanguage.ENGLISH -> currentPersona.preferredLocale.toLanguageTag()
             }
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, langTag)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, langTag)

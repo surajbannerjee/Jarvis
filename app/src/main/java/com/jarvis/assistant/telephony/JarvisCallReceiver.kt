@@ -9,6 +9,7 @@ import android.util.Log
 import com.jarvis.assistant.JarvisApp
 import com.jarvis.assistant.contacts.ContactHelper
 import com.jarvis.assistant.nlp.SupportedLanguage
+import com.jarvis.assistant.persona.PersonaManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -57,23 +58,17 @@ class JarvisCallReceiver : BroadcastReceiver() {
                 null
             }
 
-            // 3. Construct Announcement
-            val announcementText: String
-            val speechLang: SupportedLanguage
+            // 3. Construct Announcement using Active Stark Persona
+            val persona = PersonaManager.getActivePersona()
             val relationTag = alias?.relationshipTag
+            val targetName = relationTag ?: displayName
+            val isBengali = relationTag != null
 
-            if (relationTag != null) {
-                // Known relationship tag (e.g. bou, wife, mummy, boss)
-                announcementText = "Boss, tomar $relationTag call korche."
-                speechLang = SupportedLanguage.BENGALI
-            } else {
-                // Standard caller announcement
-                announcementText = "Boss, incoming call from $displayName."
-                speechLang = SupportedLanguage.ENGLISH
-            }
+            val announcementText = persona.formatCallerAnnouncement(targetName, isBengali)
+            val speechLang = if (isBengali) SupportedLanguage.BENGALI else SupportedLanguage.ENGLISH
 
             // 4. Announce Caller
-            Log.d(TAG, "Announcing caller: $announcementText")
+            Log.d(TAG, "Announcing caller via ${persona.displayName}: $announcementText")
             val speechManager = JarvisApp.instance.speechManager
             speechManager.speak(
                 text = announcementText,

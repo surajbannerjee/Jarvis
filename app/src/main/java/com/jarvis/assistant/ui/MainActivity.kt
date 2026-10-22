@@ -1,7 +1,6 @@
 package com.jarvis.assistant.ui
 
 import android.Manifest
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -35,6 +34,9 @@ import com.jarvis.assistant.data.entity.AliasEntity
 import com.jarvis.assistant.nlp.CommandParser
 import com.jarvis.assistant.nlp.JarvisIntent
 import com.jarvis.assistant.nlp.SupportedLanguage
+import com.jarvis.assistant.persona.PersonaGender
+import com.jarvis.assistant.persona.PersonaManager
+import com.jarvis.assistant.persona.StarkPersona
 import com.jarvis.assistant.speech.JarvisSpeechManager
 import com.jarvis.assistant.telephony.JarvisAccessibilityService
 import kotlinx.coroutines.Dispatchers
@@ -44,16 +46,32 @@ import kotlinx.coroutines.withContext
 
 class MainActivity : AppCompatActivity() {
 
+    // Header & Persona Views
+    private lateinit var tvAppTitle: TextView
+    private lateinit var tvPersonaDisplayName: TextView
+    private lateinit var tvPersonaCodeName: TextView
+    private lateinit var tvPersonaDescription: TextView
+    private lateinit var tvPersonaGenderBadge: TextView
+    private lateinit var btnSwitchPersona: Button
+    private lateinit var btnPreviewVoice: Button
+
+    // Voice Assistant Views
     private lateinit var btnMic: ImageButton
     private lateinit var tvVoiceStatus: TextView
     private lateinit var tvRecognizedSpeech: TextView
+
+    // Permissions Views
     private lateinit var btnGrantCorePerms: Button
     private lateinit var btnGrantNotification: Button
     private lateinit var btnGrantAccessibility: Button
     private lateinit var btnGrantBattery: Button
+
+    // Alias Views
     private lateinit var btnAddAlias: Button
     private lateinit var tvEmptyAliases: TextView
     private lateinit var rvAliases: RecyclerView
+
+    // Answering Machine Views
     private lateinit var switchAnsweringMachine: MaterialSwitch
     private lateinit var etRingThreshold: EditText
 
@@ -92,6 +110,7 @@ class MainActivity : AppCompatActivity() {
         setupRecyclerView()
         setupListeners()
         observeAliases()
+        observePersona()
     }
 
     override fun onResume() {
@@ -100,6 +119,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initViews() {
+        tvAppTitle = findViewById(R.id.tvAppTitle)
+        tvPersonaDisplayName = findViewById(R.id.tvPersonaDisplayName)
+        tvPersonaCodeName = findViewById(R.id.tvPersonaCodeName)
+        tvPersonaDescription = findViewById(R.id.tvPersonaDescription)
+        tvPersonaGenderBadge = findViewById(R.id.tvPersonaGenderBadge)
+        btnSwitchPersona = findViewById(R.id.btnSwitchPersona)
+        btnPreviewVoice = findViewById(R.id.btnPreviewVoice)
+
         btnMic = findViewById(R.id.btnMic)
         tvVoiceStatus = findViewById(R.id.tvVoiceStatus)
         tvRecognizedSpeech = findViewById(R.id.tvRecognizedSpeech)
@@ -128,6 +155,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupListeners() {
+        btnSwitchPersona.setOnClickListener {
+            showPersonaSelectionDialog()
+        }
+
+        btnPreviewVoice.setOnClickListener {
+            val persona = PersonaManager.getActivePersona()
+            speechManager.previewPersona(persona)
+            Toast.makeText(this, "Playing ${persona.displayName} voice preview...", Toast.LENGTH_SHORT).show()
+        }
+
         btnGrantCorePerms.setOnClickListener {
             permissionLauncher.launch(corePermissions.toTypedArray())
         }
@@ -173,6 +210,42 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         })
+    }
+
+    private fun observePersona() {
+        lifecycleScope.launch {
+            PersonaManager.activePersonaFlow.collectLatest { persona ->
+                tvAppTitle.text = persona.displayName
+                tvPersonaDisplayName.text = persona.displayName
+                tvPersonaCodeName.text = persona.codeName
+                tvPersonaDescription.text = persona.description
+
+                val badgeText = when (persona.gender) {
+                    PersonaGender.FEMALE -> "${persona.preferredLocale.displayCountry.ifBlank { "TACTICAL" }} FEMALE"
+                    PersonaGender.MALE -> "${persona.preferredLocale.displayCountry.ifBlank { "TACTICAL" }} MALE"
+                    PersonaGender.ROBOTIC -> "ROBOTIC RESONANCE"
+                }
+                tvPersonaGenderBadge.text = badgeText
+            }
+        }
+    }
+
+    private fun showPersonaSelectionDialog() {
+        val personas = StarkPersona.entries.toTypedArray()
+        val items = personas.map { "${it.displayName} - ${it.codeName}" }.toTypedArray()
+        val currentIdx = personas.indexOf(PersonaManager.getActivePersona())
+
+        AlertDialog.Builder(this)
+            .setTitle("Select Stark AI Persona")
+            .setSingleChoiceItems(items, currentIdx) { dialog, which ->
+                val selected = personas[which]
+                PersonaManager.setActivePersona(selected)
+                dialog.dismiss()
+                speechManager.previewPersona(selected)
+                Toast.makeText(this, "${selected.displayName} active!", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun observeAliases() {
@@ -224,7 +297,6 @@ class MainActivity : AppCompatActivity() {
                 is JarvisIntent.TrainRelation -> {
                     val relation = intent.relation.lowercase().trim()
                     val contactName = intent.contactName.trim()
-                    // Auto-resolve phone number if present in contacts
                     val phone = ContactHelper.getPhoneNumberForContact(this@MainActivity, contactName)
 
                     val entity = AliasEntity(
@@ -256,7 +328,6 @@ class MainActivity : AppCompatActivity() {
                             contactToCall = alias.actualContactName
                             phoneToCall = alias.phoneNumber ?: ContactHelper.getPhoneNumberForContact(this@MainActivity, contactToCall)
                         } else {
-                            // Relationship not found in memory
                             val notFoundReply = when (intent.language) {
                                 SupportedLanguage.BENGALI -> "Ami $target er number jani na. Kar sathe connect korbo?"
                                 SupportedLanguage.HINDI -> "Mujhe $target ka number nahi pata. Kise call karoon?"
@@ -269,7 +340,6 @@ class MainActivity : AppCompatActivity() {
                             return@launch
                         }
                     } else {
-                        // Direct contact name
                         phoneToCall = ContactHelper.getPhoneNumberForContact(this@MainActivity, target)
                     }
 
@@ -334,7 +404,6 @@ class MainActivity : AppCompatActivity() {
                 if (tag.isNotEmpty() && name.isNotEmpty()) {
                     lifecycleScope.launch(Dispatchers.IO) {
                         if (phone.isEmpty()) {
-                            // Try auto-resolving phone number from contacts
                             val resolved = ContactHelper.getPhoneNumberForContact(this@MainActivity, name)
                             if (resolved != null) phone = resolved
                         }
