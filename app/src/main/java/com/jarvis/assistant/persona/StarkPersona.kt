@@ -19,7 +19,8 @@ enum class StarkPersona(
     val speechRate: Float,
     val preferredLocale: Locale,
     val signatureGreeting: String,
-    val signatureGreetingBengali: String
+    val signatureGreetingBengali: String,
+    val rawAudioResName: String? = null
 ) {
     JARVIS(
         id = "jarvis",
@@ -44,7 +45,8 @@ enum class StarkPersona(
         speechRate = 1.08f,
         preferredLocale = Locale("en", "IE"),
         signatureGreeting = "Boss! Friday online and scanning tactical feeds. Ready for your command!",
-        signatureGreetingBengali = "Boss! Friday online ache. Bolun ki korte hobe!"
+        signatureGreetingBengali = "Boss! Friday online ache. Bolun ki korte hobe!",
+        rawAudioResName = "friday_greeting"
     ),
 
     KAREN(

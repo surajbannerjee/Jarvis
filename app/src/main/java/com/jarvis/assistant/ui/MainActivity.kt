@@ -47,6 +47,7 @@ import com.jarvis.assistant.persona.PersonaGender
 import com.jarvis.assistant.persona.PersonaManager
 import com.jarvis.assistant.persona.StarkPersona
 import com.jarvis.assistant.speech.JarvisSpeechManager
+import com.jarvis.assistant.ai.JarvisAiBrain
 import com.jarvis.assistant.telephony.JarvisAccessibilityService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
@@ -77,6 +78,19 @@ class MainActivity : AppCompatActivity() {
     private var chipVoiceMaaCall: Button? = null
     private var chipVoicePriyanka: Button? = null
     private var chipVoiceBossCall: Button? = null
+
+    // Free AI Assistant Views
+    private lateinit var tvAiEngineBadge: TextView
+    private lateinit var tvAiUserPrompt: TextView
+    private lateinit var tvAiAssistantReply: TextView
+    private lateinit var btnAiGeminiConfig: Button
+    private lateinit var btnPlayFridaySpeech: Button
+
+    private var chipAskHowAreYou: Button? = null
+    private var chipAskWhoAreYou: Button? = null
+    private var chipAskCapabilities: Button? = null
+    private var chipAskBatteryStatus: Button? = null
+    private var chipAskTellJoke: Button? = null
 
     // Custom Voice Audio Views
     private lateinit var tvGreetingStatus: TextView
@@ -254,6 +268,21 @@ class MainActivity : AppCompatActivity() {
         chipVoicePriyanka = findViewById(R.id.chipVoicePriyanka)
         chipVoiceBossCall = findViewById(R.id.chipVoiceBossCall)
 
+        // Free AI Assistant Views
+        tvAiEngineBadge = findViewById(R.id.tvAiEngineBadge)
+        tvAiUserPrompt = findViewById(R.id.tvAiUserPrompt)
+        tvAiAssistantReply = findViewById(R.id.tvAiAssistantReply)
+        btnAiGeminiConfig = findViewById(R.id.btnAiGeminiConfig)
+        btnPlayFridaySpeech = findViewById(R.id.btnPlayFridaySpeech)
+
+        chipAskHowAreYou = findViewById(R.id.chipAskHowAreYou)
+        chipAskWhoAreYou = findViewById(R.id.chipAskWhoAreYou)
+        chipAskCapabilities = findViewById(R.id.chipAskCapabilities)
+        chipAskBatteryStatus = findViewById(R.id.chipAskBatteryStatus)
+        chipAskTellJoke = findViewById(R.id.chipAskTellJoke)
+
+        updateAiBadge()
+
         // Custom Voice Slots
         tvGreetingStatus = findViewById(R.id.tvGreetingStatus)
         btnSelectGreeting = findViewById(R.id.btnSelectGreeting)
@@ -325,6 +354,35 @@ class MainActivity : AppCompatActivity() {
         }
         chipVoiceBossCall?.setOnClickListener {
             runVoiceChipDirective("Call my boss")
+        }
+
+        // Quick AI Conversation Chips
+        chipAskHowAreYou?.setOnClickListener {
+            runVoiceChipDirective("Kemon acho?")
+        }
+        chipAskWhoAreYou?.setOnClickListener {
+            runVoiceChipDirective("Tumi ke?")
+        }
+        chipAskCapabilities?.setOnClickListener {
+            runVoiceChipDirective("Ki korte paro?")
+        }
+        chipAskBatteryStatus?.setOnClickListener {
+            runVoiceChipDirective("Battery status?")
+        }
+        chipAskTellJoke?.setOnClickListener {
+            runVoiceChipDirective("Ekta joke shonao")
+        }
+
+        btnPlayFridaySpeech.setOnClickListener {
+            PersonaManager.setActivePersona(StarkPersona.FRIDAY)
+            updatePersonaUi(StarkPersona.FRIDAY)
+            CustomAudioPlayer.playCustomAudio(this, "friday_greeting")
+            tvVoiceStatus.text = "Playing F.R.I.D.A.Y. Built-in Voice..."
+            Toast.makeText(this, "Playing F.R.I.D.A.Y. Speech Audio...", Toast.LENGTH_SHORT).show()
+        }
+
+        btnAiGeminiConfig.setOnClickListener {
+            showGeminiApiKeyDialog()
         }
 
         // Custom Audio Uploader Listeners
@@ -716,25 +774,65 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
-                is JarvisIntent.Unknown -> {
-                    val reply = when (intent.language) {
-                        SupportedLanguage.BENGALI -> "Ami thik bujhte parlam na. Abar bolun."
-                        SupportedLanguage.HINDI -> "Mujhe samajh nahi aaya. Kripya dobara bolein."
-                        SupportedLanguage.ENGLISH -> "I could not understand that directive. Please repeat."
-                    }
+                is JarvisIntent.Unknown, else -> {
+                    val persona = PersonaManager.getActivePersona()
                     withContext(Dispatchers.Main) {
-                        speechManager.speak(reply, intent.language)
+                        tvAiUserPrompt.text = "You: '$text'"
+                        tvAiAssistantReply.text = "${persona.displayName}: 'Thinking...'"
                     }
-                }
-
-                else -> {
-                    val reply = "Command not recognized."
+                    val aiReply = JarvisAiBrain.chat(this@MainActivity, text, intent.language)
                     withContext(Dispatchers.Main) {
-                        speechManager.speak(reply, intent.language)
+                        tvAiAssistantReply.text = "${persona.displayName}: '$aiReply'"
+                        tvRecognizedSpeech.text = "AI: $aiReply"
+                        speechManager.speak(aiReply, intent.language)
                     }
                 }
             }
         }
+    }
+
+    private fun updateAiBadge() {
+        val key = JarvisApp.instance.getGeminiApiKey()
+        if (key.isNotBlank()) {
+            tvAiEngineBadge.text = "GEMINI AI ACTIVE"
+            tvAiEngineBadge.setTextColor(ContextCompat.getColor(this, R.color.jarvis_success))
+        } else {
+            tvAiEngineBadge.text = "FREE AI ACTIVE"
+            tvAiEngineBadge.setTextColor(ContextCompat.getColor(this, R.color.jarvis_cyan_primary))
+        }
+    }
+
+    private fun showGeminiApiKeyDialog() {
+        val currentKey = JarvisApp.instance.getGeminiApiKey()
+        val etKey = EditText(this).apply {
+            hint = "Paste your Google Gemini API Key here"
+            setText(currentKey)
+            setTextColor(ContextCompat.getColor(this@MainActivity, R.color.text_primary))
+            setHintTextColor(ContextCompat.getColor(this@MainActivity, R.color.text_secondary))
+            setPadding(40, 30, 40, 30)
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("🔑 Free Gemini AI Configuration")
+            .setMessage("Add your Google Gemini API key for deep conversational intelligence in Bengali, Hindi & English.\n\n(100% Free at aistudio.google.com — No credit card needed. Leave empty to use the built-in Free AI Engine).")
+            .setView(etKey)
+            .setPositiveButton("Save Key") { _, _ ->
+                val key = etKey.text.toString().trim()
+                JarvisApp.instance.setGeminiApiKey(key)
+                updateAiBadge()
+                val msg = if (key.isNotBlank()) "Gemini AI Key saved! Advanced AI ready." else "Cleared API key. Using Free Built-in AI."
+                Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+            }
+            .setNeutralButton("Get Free Key") { _, _ ->
+                val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://aistudio.google.com/app/apikey"))
+                try {
+                    startActivity(browserIntent)
+                } catch (e: Exception) {
+                    Toast.makeText(this, "Cannot open browser", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun showAddAliasDialog() {

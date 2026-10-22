@@ -285,6 +285,165 @@
                     android:textSize="11sp" />
             </LinearLayout>
 
+            <!-- ═══ Free AI Assistant Live Conversation Card ═══ -->
+            <LinearLayout
+                android:id="@+id/cardAiConversation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_card"
+                android:orientation="vertical"
+                android:padding="16dp"
+                android:layout_marginBottom="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="🤖 FREE AI CHAT ASSISTANT"
+                        android:textColor="@color/jarvis_cyan_primary"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.05" />
+
+                    <TextView
+                        android:id="@+id/tvAiEngineBadge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="#2200E5FF"
+                        android:paddingStart="8dp"
+                        android:paddingEnd="8dp"
+                        android:paddingTop="2dp"
+                        android:paddingBottom="2dp"
+                        android:textColor="@color/jarvis_cyan_primary"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:text="FREE AI ACTIVE" />
+                </LinearLayout>
+
+                <!-- Live Conversation Bubble -->
+                <LinearLayout
+                    android:id="@+id/layoutAiBubble"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="#15FFFFFF"
+                    android:padding="12dp"
+                    android:orientation="vertical"
+                    android:layout_marginBottom="10dp">
+
+                    <TextView
+                        android:id="@+id/tvAiUserPrompt"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp"
+                        android:textStyle="italic"
+                        android:text="You: 'Kemon acho Friday?'"
+                        android:layout_marginBottom="4dp" />
+
+                    <TextView
+                        android:id="@+id/tvAiAssistantReply"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
+                        android:lineSpacingExtra="3dp"
+                        android:text="F.R.I.D.A.Y.: 'Boss! Ami online achi ebong sob tactical system ready! Bolun ki sahajjo korte pari?'" />
+                </LinearLayout>
+
+                <!-- Quick AI Conversation Chips -->
+                <HorizontalScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:scrollbars="none"
+                    android:layout_marginBottom="10dp">
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <Button
+                            android:id="@+id/chipAskHowAreYou"
+                            style="@style/Widget.Material3.Button.TonalButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="34dp"
+                            android:text="💬 Kemon acho?"
+                            android:textSize="11sp"
+                            android:layout_marginEnd="6dp" />
+
+                        <Button
+                            android:id="@+id/chipAskWhoAreYou"
+                            style="@style/Widget.Material3.Button.TonalButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="34dp"
+                            android:text="🤖 Tumi ke?"
+                            android:textSize="11sp"
+                            android:layout_marginEnd="6dp" />
+
+                        <Button
+                            android:id="@+id/chipAskCapabilities"
+                            style="@style/Widget.Material3.Button.TonalButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="34dp"
+                            android:text="⚡ Ki korte paro?"
+                            android:textSize="11sp"
+                            android:layout_marginEnd="6dp" />
+
+                        <Button
+                            android:id="@+id/chipAskBatteryStatus"
+                            style="@style/Widget.Material3.Button.TonalButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="34dp"
+                            android:text="🔋 Battery status?"
+                            android:textSize="11sp"
+                            android:layout_marginEnd="6dp" />
+
+                        <Button
+                            android:id="@+id/chipAskTellJoke"
+                            style="@style/Widget.Material3.Button.TonalButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="34dp"
+                            android:text="😂 Joke shonao"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+                </HorizontalScrollView>
+
+                <!-- AI Settings & Key button -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/btnAiGeminiConfig"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="40dp"
+                        android:layout_weight="1"
+                        android:text="🔑 Gemini API Key (Optional)"
+                        android:textColor="@color/jarvis_cyan_primary"
+                        android:textSize="12sp"
+                        android:layout_marginEnd="8dp" />
+
+                    <Button
+                        android:id="@+id/btnPlayFridaySpeech"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="40dp"
+                        android:text="🎧 Play F.R.I.D.A.Y. Voice"
+                        android:textColor="@color/jarvis_cyan_primary"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+            </LinearLayout>
+
             <!-- ═══ Custom Voice Audio Uploader Card ═══ -->
             <LinearLayout
                 android:layout_width="match_parent"

@@ -72,33 +72,20 @@ jobs:
         if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.3.0
-          name: Jarvis Assistant v1.3.0 (Contact Picker & Custom Voice Studio)
+          tag_name: v1.4.0
+          name: Jarvis Assistant v1.4.0 (F.R.I.D.A.Y. Voice & Free AI Assistant)
           body: |
-            ### 🚀 Jarvis Assistant v1.3.0
+            ### 🚀 Jarvis Assistant v1.4.0
             Download and install the APK directly on your phone!
 
-            #### 🌟 What's New:
-            - **Phone Contact Picker**: In 'Train New Relationship', tap 'Choose Contact from Phone' or click the contact name field to pick contacts directly from your address book (auto-fills saved name & number).
-            - **Quick Relation Chips**: Instant one-tap relation tags (bou, maa, baba, vai, boss, friend).
-            - **Fixed Voice Assistant**: 100% working Arc Reactor voice button with pulsing listening animation, native Bengali/Hindi/English STT, and Google Speech Recognizer fallback.
-            - **Custom Voice Studio**: Upload your own downloaded MP3/WAV audio files for:
-              1. Assistant Greeting Voice
-              2. Answering Machine Voicemail
-              3. Incoming Caller Alert
-            - **Instant Voice Preview**: In-app play/stop buttons to test uploaded custom voice clips and AI personas.
-
-            #### 🌟 10 Iconic Stark AI Persona Voices:
-            - **J.A.R.V.I.S.** (Calm British butler AI)
-            - **F.R.I.D.A.Y.** (Tactical & energetic Irish female AI)
-            - **K.A.R.E.N.** (Gentle Spider-Man suit lady AI)
-            - **E.D.I.T.H.** (High-tech orbital satellite defense AI)
-            - **U.L.T.R.O.N.** (Deep, menacing robotic resonance)
-            - **V.E.R.O.N.I.C.A.** (Hulkbuster satellite deployment AI)
-            - **J.O.C.A.S.T.A.** (Ethicist & logical synthetic AI)
-            - **H.O.M.E.R.** (Vintage armory & estate security AI)
-            - **P.L.A.T.O.** (Fast background protocol supervisor)
-            - **D.U.M.-E** (Playful workshop robotic arm)
+            #### 🌟 What's New in v1.4.0:
+            - **🎧 Built-in F.R.I.D.A.Y. Signature Voice**: Integrated the user's custom `speech.wav` directly into F.R.I.D.A.Y.'s persona audio! Tapping 'Play F.R.I.D.A.Y. Voice' or activating Friday immediately plays her authentic speech audio!
+            - **🤖 Full Free AI Chat Assistant**: Talk naturally to your assistant about anything ("Kemon acho?", "Tumi ke?", "Ki korte paro?", "Ekta joke shonao", weather, jokes, chit-chat in Bengali, Hindi, and English)!
+            - **⚡ Smart AI Auto-Reply & Answering Machine**: Unattended calls and WhatsApp messages now receive intelligent, polite auto-replies generated on-the-fly by the AI Assistant!
+            - **🔑 Optional Free Google Gemini API**: Built-in 100% Free AI Engine works out-of-the-box, plus you can paste an optional Free Google Gemini API Key for deep conversational mastery!
+            - **📱 Phone Contact Picker**: In 'Train New Relationship', pick contacts directly from phone contacts with auto-filled name & number.
+            - **🎙️ Arc Reactor Glowing UI**: Pulsing cyan glow animation during voice recognition.
+            - **🎧 Custom Voice Studio**: Upload, test, and preview custom greeting, voicemail, and caller alert audio files.
 
             #### 🛡️ Core Capabilities:
             - **100% Speech Recognition & Dynamic Multilingual TTS**

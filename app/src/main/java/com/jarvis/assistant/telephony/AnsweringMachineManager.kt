@@ -62,15 +62,10 @@ object AnsweringMachineManager {
                 // 4. Voice message to caller (Tailored to active Stark Persona)
                 val persona = PersonaManager.getActivePersona()
 
-                // Check if user provided custom audio file (e.g. jarvis_voicemail.mp3)
-                val customVoicemailPlayed = com.jarvis.assistant.audio.CustomAudioPlayer.playCustomAudio(
-                    context = context,
-                    audioFileNameWithoutExtension = "${persona.id}_voicemail",
-                    streamType = AudioManager.STREAM_VOICE_CALL
-                ) {
+                val finishVoicemail: () -> Unit = {
                     scope.launch {
                         delay(2000)
-                        Log.d(TAG, "Terminating call post custom voicemail...")
+                        Log.d(TAG, "Terminating call post voicemail...")
                         hangUpCall(context)
                         audioManager.isSpeakerphoneOn = originalSpeakerphone
                         audioManager.mode = originalMode
@@ -78,27 +73,46 @@ object AnsweringMachineManager {
                     }
                 }
 
+                // Check for custom audio or Friday signature speech.wav
+                val customVoicemailPlayed = if (persona == com.jarvis.assistant.persona.StarkPersona.FRIDAY) {
+                    com.jarvis.assistant.audio.CustomAudioPlayer.playCustomAudio(
+                        context = context,
+                        audioFileNameWithoutExtension = "friday_greeting",
+                        streamType = AudioManager.STREAM_VOICE_CALL
+                    ) { finishVoicemail() } || com.jarvis.assistant.audio.CustomAudioPlayer.playAudioSlot(
+                        context = context,
+                        slot = com.jarvis.assistant.audio.AudioSlot.VOICEMAIL,
+                        streamType = AudioManager.STREAM_VOICE_CALL
+                    ) { finishVoicemail() }
+                } else {
+                    com.jarvis.assistant.audio.CustomAudioPlayer.playAudioSlot(
+                        context = context,
+                        slot = com.jarvis.assistant.audio.AudioSlot.VOICEMAIL,
+                        streamType = AudioManager.STREAM_VOICE_CALL
+                    ) { finishVoicemail() } || com.jarvis.assistant.audio.CustomAudioPlayer.playCustomAudio(
+                        context = context,
+                        audioFileNameWithoutExtension = "${persona.id}_voicemail",
+                        streamType = AudioManager.STREAM_VOICE_CALL
+                    ) { finishVoicemail() }
+                }
+
                 if (!customVoicemailPlayed) {
-                    val voiceMessage = persona.formatVoicemailMessage(isBengali = true)
+                    // Generate smart AI Answering Machine message via JarvisAiBrain
+                    val voiceMessage = com.jarvis.assistant.ai.JarvisAiBrain.generateAutoReply(
+                        context = context,
+                        senderName = callerRelationOrName ?: "Caller",
+                        messageText = null,
+                        isCall = true
+                    )
                     val speechManager = JarvisApp.instance.speechManager
 
-                    // Speak via STREAM_VOICE_CALL so caller hears it through speakerphone mic loopback/telephony stream
+                    // Speak via STREAM_VOICE_CALL so caller hears it
                     speechManager.speak(
                         text = voiceMessage,
                         language = SupportedLanguage.BENGALI,
                         streamType = AudioManager.STREAM_VOICE_CALL
                     ) {
-                        // 5. On speech completion callback
-                        scope.launch {
-                            delay(2000) // 2 seconds post-speech pause
-                            Log.d(TAG, "Terminating call post voicemail...")
-                            hangUpCall(context)
-
-                            // 6. Restore original audio settings
-                            audioManager.isSpeakerphoneOn = originalSpeakerphone
-                            audioManager.mode = originalMode
-                            isCallInProgress = false
-                        }
+                        finishVoicemail()
                     }
                 }
             } catch (e: Exception) {

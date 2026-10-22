@@ -42,10 +42,28 @@ class JarvisApp : Application() {
         preferences.edit().putInt(KEY_RING_THRESHOLD_SECONDS, seconds).apply()
     }
 
+    fun getGeminiApiKey(): String {
+        return preferences.getString(KEY_GEMINI_API_KEY, "") ?: ""
+    }
+
+    fun setGeminiApiKey(key: String) {
+        preferences.edit().putString(KEY_GEMINI_API_KEY, key.trim()).apply()
+    }
+
+    fun isAiConversationEnabled(): Boolean {
+        return preferences.getBoolean(KEY_AI_CONVERSATION_ENABLED, true)
+    }
+
+    fun setAiConversationEnabled(enabled: Boolean) {
+        preferences.edit().putBoolean(KEY_AI_CONVERSATION_ENABLED, enabled).apply()
+    }
+
     companion object {
         private const val PREFS_NAME = "jarvis_settings"
         private const val KEY_ANSWERING_MACHINE_ENABLED = "key_answering_machine_enabled"
         private const val KEY_RING_THRESHOLD_SECONDS = "key_ring_threshold_seconds"
+        private const val KEY_GEMINI_API_KEY = "key_gemini_api_key"
+        private const val KEY_AI_CONVERSATION_ENABLED = "key_ai_conversation_enabled"
 
         lateinit var instance: JarvisApp
             private set

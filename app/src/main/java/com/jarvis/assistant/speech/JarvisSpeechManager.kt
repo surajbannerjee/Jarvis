@@ -189,14 +189,20 @@ class JarvisSpeechManager private constructor(private val context: Context) :
 
     fun previewPersona(persona: StarkPersona, inBengali: Boolean = false) {
         applyPersona(persona)
-        // Check if user provided custom audio file for greeting slot or persona greeting
-        val customAudioPlayed = com.jarvis.assistant.audio.CustomAudioPlayer.playAudioSlot(
-            context,
-            com.jarvis.assistant.audio.AudioSlot.GREETING
-        ) || com.jarvis.assistant.audio.CustomAudioPlayer.playCustomAudio(
-            context,
-            "${persona.id}_greeting"
-        )
+        // If it is FRIDAY, prioritize her signature speech.wav audio!
+        val customAudioPlayed = if (persona == StarkPersona.FRIDAY) {
+            com.jarvis.assistant.audio.CustomAudioPlayer.playCustomAudio(context, "friday_greeting") ||
+            com.jarvis.assistant.audio.CustomAudioPlayer.playAudioSlot(context, com.jarvis.assistant.audio.AudioSlot.GREETING)
+        } else {
+            com.jarvis.assistant.audio.CustomAudioPlayer.playAudioSlot(
+                context,
+                com.jarvis.assistant.audio.AudioSlot.GREETING
+            ) || com.jarvis.assistant.audio.CustomAudioPlayer.playCustomAudio(
+                context,
+                persona.rawAudioResName ?: "${persona.id}_greeting"
+            )
+        }
+
         if (!customAudioPlayed) {
             val text = if (inBengali) persona.signatureGreetingBengali else persona.signatureGreeting
             val lang = if (inBengali) SupportedLanguage.BENGALI else SupportedLanguage.ENGLISH
