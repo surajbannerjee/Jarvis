@@ -7,6 +7,9 @@ on:
     branches: [ "**" ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build Debug APK
@@ -22,26 +25,31 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-
       - name: Grant execute permission for gradlew
-        run: |
-          if [ -f "./gradlew" ]; then
-            chmod +x gradlew
-          fi
+        run: chmod +x gradlew
 
       - name: Build with Gradle
-        run: |
-          if [ -f "./gradlew" ]; then
-            ./gradlew assembleDebug --stacktrace
-          else
-            gradle assembleDebug --stacktrace
-          fi
+        run: ./gradlew assembleDebug --stacktrace
 
-      - name: Upload Debug APK
+      - name: Upload Debug APK to Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: Jarvis-Debug-APK
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+
+      - name: Create Release and Upload APK
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.0
+          name: Jarvis Assistant v1.0.0 (Direct Phone APK)
+          body: |
+            ### 🚀 Jarvis Offline Android Assistant
+            Download and install the APK directly on your phone:
+            - **100% Offline Speech Recognition & Multilingual TTS**
+            - **Room Memory Database for Relationship Mapping**
+            - **Autonomous Answering Machine & WhatsApp Reader**
+          files: app/build/outputs/apk/debug/*.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
